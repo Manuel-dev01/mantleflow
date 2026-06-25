@@ -1,5 +1,6 @@
 packages:
   - "agent"
-  # web, mcp, skill packages are added as they gain a package.json (Phase 1+)
+  - "web"
+  # mcp, skill packages are added as they gain a package.json (Phase 3)
 allowBuilds:
   esbuild: true
