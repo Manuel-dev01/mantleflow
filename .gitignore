@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+.next/
+out/
+.turbo/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# editor / os
+.DS_Store
+*.log
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/**/dry-run/
+
+# misc
+coverage/
+*.tsbuildinfo
