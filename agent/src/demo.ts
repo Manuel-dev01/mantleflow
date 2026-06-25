@@ -2,8 +2,14 @@
  * Live demo: build the MI4 distribution map from real Mantle data and print it.
  * Run with: pnpm -C agent demo   (set ETHERSCAN_API_KEY for source-verified compliance)
  */
+import { config as loadDotenv } from "dotenv";
+import { fileURLToPath } from "node:url";
+import { dirname, resolve } from "node:path";
 import { loadConfig } from "./config/env.js";
 import { createCapabilities } from "./capabilities.js";
+
+// Load repo-root .env regardless of cwd (dev-only convenience).
+loadDotenv({ path: resolve(dirname(fileURLToPath(import.meta.url)), "../../.env") });
 
 async function main() {
   const config = loadConfig(process.env);

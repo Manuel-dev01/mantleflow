@@ -13,16 +13,19 @@ export const EXPLORER_SEPOLIA = "https://explorer.sepolia.mantle.xyz";
 
 export type MantleNetwork = "mainnet" | "sepolia";
 
-export function publicClientFor(network: MantleNetwork): PublicClient {
+export function publicClientFor(
+  network: MantleNetwork,
+  rpcUrl?: string,
+): PublicClient {
   if (network === "mainnet") {
     return createPublicClient({
       chain: mantle,
-      transport: http(MANTLE_MAINNET_RPC),
+      transport: http(rpcUrl ?? MANTLE_MAINNET_RPC),
     });
   }
   return createPublicClient({
     chain: mantleSepoliaTestnet,
-    transport: http(MANTLE_SEPOLIA_RPC),
+    transport: http(rpcUrl ?? MANTLE_SEPOLIA_RPC),
   });
 }
 

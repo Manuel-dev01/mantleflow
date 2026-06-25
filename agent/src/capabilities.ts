@@ -33,6 +33,10 @@ export function createCapabilities(config: AppConfig): Capabilities {
     ? createEtherscanAdapter(config.etherscanApiKey)
     : null;
 
+  function rpcFor(network: MantleNetwork): string {
+    return network === "mainnet" ? config.mantleMainnetRpc : config.mantleSepoliaRpc;
+  }
+
   function requireAsset(symbol: string) {
     const asset = TRACKED_ASSETS[symbol.toUpperCase()];
     if (!asset) throw new Error(`Unknown asset "${symbol}". Tracked: ${Object.keys(TRACKED_ASSETS).join(", ")}`);
@@ -50,21 +54,21 @@ export function createCapabilities(config: AppConfig): Capabilities {
 
     async getTokenFacts(symbol) {
       const asset = requireAsset(symbol);
-      const client = publicClientFor(asset.network as MantleNetwork);
+      const client = publicClientFor(asset.network as MantleNetwork, rpcFor(asset.network as MantleNetwork));
       return readTokenFacts(client, asset.network as MantleNetwork, asset.address as Address, now());
     },
 
     async checkCompliance(symbol) {
       const asset = requireAsset(symbol);
       if (!etherscan) throw new Error("ETHERSCAN_API_KEY required for compliance source-verification");
-      const client = publicClientFor(asset.network as MantleNetwork);
+      const client = publicClientFor(asset.network as MantleNetwork, rpcFor(asset.network as MantleNetwork));
       return checkComplianceGate(client, asset.network as MantleNetwork, asset.address as Address, etherscan, now());
     },
 
     async buildDistributionMap(symbol) {
       const asset = requireAsset(symbol);
       const network = asset.network as MantleNetwork;
-      const client = publicClientFor(network);
+      const client = publicClientFor(network, rpcFor(network));
       const ts = now();
 
       const [reachability, compliance] = await Promise.all([

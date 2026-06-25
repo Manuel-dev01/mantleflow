@@ -15,3 +15,4 @@ export { assembleDistributionMap } from "./engine/engine.js";
 export { detectGatesFromFunctions, checkComplianceGate } from "./modules/compliance.js";
 export { findSecondaryVenues } from "./dex/reachability.js";
 export { createCapabilities, type Capabilities } from "./capabilities.js";
+export { runQuery, type QueryResult } from "./orchestrator/orchestrator.js";

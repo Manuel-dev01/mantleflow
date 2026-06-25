@@ -94,6 +94,10 @@ Remaining open items are tracked in §6 (non-blocking).
   compliance/transfer-restriction logic lives in the implementation contract (the gating signal we
   detect in Phase 1). Issuer/transfer agent: **Securitize**; fund manager Mantle Guard Ltd.
   (explorer.mantle.xyz token page + Securitize/Businesswire launch PR, 2025-04-24).
+  - **CONFIRMED LIVE 2026-06-25:** the compliance detector flagged MI4 as a **Securitize DS-Token
+    transfer-agent allowlist** (gating functions present on the proxy-resolved implementation ABI via
+    Etherscan V2). Reachability: **no on-chain secondary venue** (Merchant Moe factory `getPair` for
+    USDC/WMNT/USDT/WETH all empty + DefiLlama no Mantle pool). Both are the headline thesis results.
 - Context figure: Mantle **RWA TVL $247.5M, +27.4% QoQ in Q1 2026** — Messari, reported 2026-06-09
   (secondary, dated/labeled).
 
