@@ -9,3 +9,9 @@
 export * from "./types/source-receipt.js";
 export * from "./config/chains.js";
 export * from "./config/addresses.js";
+export * from "./config/env.js";
+export * from "./engine/types.js";
+export { assembleDistributionMap } from "./engine/engine.js";
+export { detectGatesFromFunctions, checkComplianceGate } from "./modules/compliance.js";
+export { findSecondaryVenues } from "./dex/reachability.js";
+export { createCapabilities, type Capabilities } from "./capabilities.js";

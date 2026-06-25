@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "demo": "tsx src/demo.ts"
   },
   "dependencies": {
     "viem": "^2.21.0",

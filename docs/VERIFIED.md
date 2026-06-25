@@ -97,6 +97,20 @@ Remaining open items are tracked in §6 (non-blocking).
 - Context figure: Mantle **RWA TVL $247.5M, +27.4% QoQ in Q1 2026** — Messari, reported 2026-06-09
   (secondary, dated/labeled).
 
+## 7. Phase 1 data sources & DEX factories
+
+- **Mantlescan API = unified Etherscan API V2** — `https://api.etherscan.io/v2/api?chainid=5000&…`
+  (5003 for Sepolia). The old `api.mantlescan.xyz` V1 is **deprecated** (confirmed 2026-06-25 — V1
+  returns a deprecation NOTOK). Adapter uses V2 with `ETHERSCAN_API_KEY`.
+- **DefiLlama** `https://yields.llama.fi/pools` reachable keyless (confirmed 2026-06-25) — used to
+  cross-check secondary-market reachability (token absent from all Mantle pools ⇒ no liquid venue).
+- **Merchant Moe DEX factories (candidate — from official docs; code confirmed at runtime):**
+  classic MoeFactory `0x5bEF015CA9424A7C07B68490616a4C1F094BEDEc`, Liquidity Book 2.2 Factory
+  `0xa6630671775c4EA2743840F9A5016dCf2A104054` — https://docs.merchantmoe.com/resources/contracts.
+  (Agni factory: docs domain unreachable 2026-06-25 → deferred to Phase 2.)
+- **Public RPC throttling:** `https://rpc.mantle.xyz` rate-limits under burst use; set
+  `MANTLE_MAINNET_RPC` to a dedicated endpoint for reliable live reads/demo.
+
 ---
 
 ## §6. Open items to close (non-blocking for architecture lock)

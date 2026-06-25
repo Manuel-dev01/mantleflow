@@ -44,6 +44,20 @@ a code rule.
 No contract address is used for a write until confirmed on-chain (`eth_getCode` + a read) against a
 primary explorer/RPC. The ERC-8004 registries, USDC, and MI4 in VERIFIED.md have passed this gate.
 
+### D8 — Orchestration: Anthropic tool-use, model claude-opus-4-8, streaming
+**Date:** 2026-06-25. **Status:** locked (model), pending (loop impl).
+NL demo surface is a full Anthropic tool-use orchestration (owner decision). Per the claude-api
+skill, the orchestrator model defaults to **`claude-opus-4-8`** (not sonnet) with adaptive thinking
+and streaming; system prompt constrains the model to only state tool-returned numbers and cite each
+datum's receipt. Both keys live (Etherscan V2 + Anthropic).
+
+### D9 — Capability functions shared by engine and agent
+**Date:** 2026-06-25. **Status:** locked.
+Each capability (reachability, compliance, token facts) is one deterministic function returning
+`Sourced<…>` (`agent/src/capabilities.ts`, `dex/reachability.ts`, `modules/compliance.ts`). The
+engine composes them into a `DistributionMap`; the orchestrator will expose the same functions as
+tools. No logic duplicated between engine and agent.
+
 ### D7 — Monorepo layout
 **Date:** 2026-06-25. **Status:** locked.
 pnpm workspaces + Turborepo. `/agent` (TS core lib), `/web` (Next.js + API routes, Vercel),
