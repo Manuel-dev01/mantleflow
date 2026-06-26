@@ -3,7 +3,8 @@ import { loadConfig, createCapabilities } from "@mantleflow/agent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+// Compare fans out 6 assets; allow headroom (Vercel clamps to the plan's max if lower).
+export const maxDuration = 120;
 
 function jsonSafe(data: unknown, status = 200): NextResponse {
   const body = JSON.stringify(data, (_k, v) => (typeof v === "bigint" ? v.toString() : v));

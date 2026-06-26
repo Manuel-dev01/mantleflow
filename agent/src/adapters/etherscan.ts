@@ -23,7 +23,7 @@ type SourceCodeResponse = EtherscanResponse<Array<Record<string, string>>>;
 
 // Etherscan's free tier limits to ~5 req/s. The compare view fans out 6 assets at once; cap
 // concurrent Etherscan calls so the burst stays under the limit and every gate resolves.
-const MAX_CONCURRENT = 1;
+const MAX_CONCURRENT = 2;
 let active = 0;
 const waiters: Array<() => void> = [];
 async function withLimit<T>(fn: () => Promise<T>): Promise<T> {
@@ -65,7 +65,7 @@ export function createEtherscanAdapter(apiKey: string): EtherscanAdapter {
       // responses are cached 10 min (cacheIf) so warmed assets stay resolved across requests.
       const res = await withLimit(async () => {
         let r!: SourceCodeResponse;
-        for (let attempt = 0; attempt < 6; attempt++) {
+        for (let attempt = 0; attempt < 4; attempt++) {
           r = await fetchJson<SourceCodeResponse>(url, {
             ttlMs: 10 * 60_000,
             cacheIf: (v) => v.status === "1",
