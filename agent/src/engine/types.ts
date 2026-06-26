@@ -40,8 +40,10 @@ export interface DistributionMap {
     network: "mainnet" | "sepolia";
   };
   subScores: SubScore[];
-  /** Composite 0..100, or null when required sub-scores aren't all computed. */
+  /** Composite 0..100 (weighted mean over computed sub-scores), or null when none computed. */
   composite: number | null;
+  /** How the composite was derived (e.g. "partial — excludes cross-chain (Phase 4)"). */
+  compositeNote?: string;
   /** Headline research findings — absences are signal (e.g. "No on-chain secondary venue"). */
   headlines: string[];
   generatedAt: string;

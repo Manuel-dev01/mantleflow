@@ -28,12 +28,21 @@ export const TOOL_DEFS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "get_distribution_map",
       description:
-        "Compute the Distribution Score map for a tracked asset from live Mantle data: secondary-market reachability and compliance gating (computed), plus liquidity depth, fragmentation, borrowability, cross-chain reach (not yet computed in this phase). Every datum carries a source receipt. This is the authoritative source — only state numbers it returns.",
+        "Compute the Distribution Score map for a tracked asset from live Mantle data: secondary-market reachability, liquidity depth (±2% of mid), fragmentation (HHI), borrowability (Lendle), and compliance gating are computed; cross-chain reach is not yet computed. Every datum carries a source receipt. This is the authoritative source — only state numbers it returns.",
       parameters: {
         type: "object",
         properties: { symbol: { type: "string", description: "Asset symbol, e.g. MI4." } },
         required: ["symbol"],
       },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "compare_assets",
+      description:
+        "Compare every tracked Mantle asset side by side: each asset's sub-scores, partial composite, and headline findings from live data. Use for 'compare', 'rank', or 'which asset is most distributed' questions.",
+      parameters: { type: "object", properties: {}, required: [] },
     },
   },
 ];
@@ -79,6 +88,18 @@ export async function runTool(
             .filter(Boolean),
         })),
       });
+    }
+    case "compare_assets": {
+      const maps = await ctx.caps.compareAssets();
+      return JSON.stringify(
+        maps.map((m) => ({
+          symbol: m.asset.symbol,
+          composite: m.composite,
+          compositeNote: m.compositeNote,
+          headlines: m.headlines,
+          subScores: m.subScores.map((s) => ({ id: s.id, status: s.status, value: s.value })),
+        })),
+      );
     }
     default:
       return JSON.stringify({ error: `Unknown tool ${name}` });

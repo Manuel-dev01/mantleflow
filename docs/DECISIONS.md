@@ -44,6 +44,29 @@ a code rule.
 No contract address is used for a write until confirmed on-chain (`eth_getCode` + a read) against a
 primary explorer/RPC. The ERC-8004 registries, USDC, and MI4 in VERIFIED.md have passed this gate.
 
+### D10 — Borrowability source: Lendle only (Phase 2)
+**Date:** 2026-06-26. **Status:** locked.
+Lendle (Aave-v2 fork) has confirmed Mantle addresses + a ProtocolDataProvider that returns decoded
+LTV/rates/utilization — fastest path to a rigorous, real borrowability sub-score. Aave V3 + INIT
+Capital deferred to a later hardening pass. Not-listed-on-Lendle is scored 0 and reported as a finding.
+
+### D11 — Depth methodology: exact-v2 + TVL-proxy, labelled
+**Date:** 2026-06-26. **Status:** locked.
+Liquidity depth uses on-chain `getReserves` for Uniswap-v2 pairs (exact ±2%-of-mid USD via
+constant-product) and DefiLlama pool TVL as a clearly-labelled proxy for v3 / Liquidity-Book venues
+(no precise ±2% claimed there). Honest over precise — never present a TVL proxy as a ±2% depth.
+
+### D12 — Partial composite (5/6), labelled
+**Date:** 2026-06-26. **Status:** locked.
+The composite is a weighted mean over *computed* sub-scores, renormalising weights, and **excludes
+cross-chain** (Phase 4) with an explicit `compositeNote`. The engine still emits no number for any
+not-applicable / not-yet-computed sub-score.
+
+### D13 — DeepSeek orchestrator (supersedes D8's Anthropic choice)
+**Date:** 2026-06-26. **Status:** locked.
+Orchestrator LLM is **DeepSeek** (`deepseek-v4-flash`) via the OpenAI-compatible API
+(`LLM_BASE_URL`), owner-supplied. Same tool-use loop + accuracy-constrained system prompt as D8.
+
 ### D8 — Orchestration: Anthropic tool-use, model claude-opus-4-8, streaming
 **Date:** 2026-06-25. **Status:** locked (model), pending (loop impl).
 NL demo surface is a full Anthropic tool-use orchestration (owner decision). Per the claude-api

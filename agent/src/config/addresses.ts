@@ -60,4 +60,61 @@ export const TRACKED_ASSETS: Record<string, TrackedAsset> = {
     isProxy: true,
     verifiedAt: "2026-06-25",
   },
+  // Phase 2 assets — all on-chain verified (getCode + price) 2026-06-26. See docs/VERIFIED.md §8.
+  mETH: {
+    symbol: "mETH",
+    name: "Mantle Staked Ether",
+    network: "mainnet",
+    address: "0xcDA86A272531e8640cD7F1a92c01839911B90bb0",
+    decimals: 18,
+    issuer: "mETH Protocol (Mantle)",
+    verifiedAt: "2026-06-26",
+  },
+  cmETH: {
+    symbol: "cmETH",
+    name: "Mantle Restaked ETH",
+    network: "mainnet",
+    address: "0xE6829d9a7eE3040e1276Fa75293Bde931859e8fA",
+    decimals: 18,
+    issuer: "mETH Protocol (Mantle)",
+    isProxy: true,
+    verifiedAt: "2026-06-26",
+  },
+  fBTC: {
+    symbol: "fBTC",
+    name: "FunctionBTC",
+    network: "mainnet",
+    address: "0xC96dE26018A54D51c097160568752c4E3BD6C364",
+    decimals: 8,
+    issuer: "Function (Galaxy/Antalpha-backed omnichain BTC)",
+    verifiedAt: "2026-06-26",
+  },
+  USDe: {
+    symbol: "USDe",
+    name: "Ethena USDe",
+    network: "mainnet",
+    address: "0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34",
+    decimals: 18,
+    issuer: "Ethena (OFT)",
+    verifiedAt: "2026-06-26",
+  },
+  USDY: {
+    symbol: "USDY",
+    name: "Ondo US Dollar Yield",
+    network: "mainnet",
+    address: "0x5bE26527e817998A7206475496fDE1E68957c5A6",
+    decimals: 18,
+    issuer: "Ondo Finance (blocklist transfer hook)",
+    isProxy: true,
+    verifiedAt: "2026-06-26",
+  },
+  // NOTE: syrupUSDT (Maple) is intentionally NOT tracked — Maple withdrew it from Aave-on-Mantle
+  // ~2026-04-20. Recorded as a thesis finding ("an RWA that left Mantle"), not an omission.
+};
+
+/** Lendle (Aave-v2 fork) — Mantle borrowability source. On-chain verified 2026-06-26. */
+export const LENDLE = {
+  lendingPool: "0xCFa5aE7c2CE8Fadc6426C1ff872cA45378Fb7cF3" as Address,
+  protocolDataProvider: "0x552b9e4bae485C4B7F540777d7D25614CdB84773" as Address,
+  addressesProvider: "0xAb94Bedd21ae3411eB2698945dfCab1D5C19C3d4" as Address,
 };

@@ -115,6 +115,15 @@ Remaining open items are tracked in §6 (non-blocking).
 - **Public RPC throttling:** `https://rpc.mantle.xyz` rate-limits under burst use; set
   `MANTLE_MAINNET_RPC` to a dedicated endpoint for reliable live reads/demo.
 
+## 8. Phase 2 — assets, lending, methodology (on-chain verified 2026-06-26)
+
+- **Tracked assets** (all `getCode` + DefiLlama-price verified): mETH `0xcDA86A272531e8640cD7F1a92c01839911B90bb0` (18); cmETH `0xE6829d9a7eE3040e1276Fa75293Bde931859e8fA` (18, proxy); fBTC `0xC96dE26018A54D51c097160568752c4E3BD6C364` (8, DefiLlama symbol FBTC, ~$59.7k); USDe `0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34` (18, OFT); USDY `0x5bE26527e817998A7206475496fDE1E68957c5A6` (18, proxy + **blocklist transfer hook**). USDe/USDY share their L1 address via deterministic cross-chain deploys — confirmed live on Mantle, not an L1 mix-up.
+- **syrupUSDT (Maple): NOT on Mantle.** Maple withdrew USDT from Aave-on-Mantle ~2026-04-20 (rsETH-exploit caution). Recorded as a **distribution finding** ("an RWA that left Mantle — distribution can regress"), not tracked.
+- **Lendle** (Aave-v2 fork, borrowability source, getCode-verified): ProtocolDataProvider `0x552b9e4bae485C4B7F540777d7D25614CdB84773`, LendingPool `0xCFa5aE7c2CE8Fadc6426C1ff872cA45378Fb7cF3`, AddressesProvider `0xAb94Bedd21ae3411eB2698945dfCab1D5C19C3d4`. `getReserveConfigurationData`/`getReserveData` return decoded LTV/rates/utilization. (Live read 2026-06-26: mETH = collateral, LTV 82.5%, liq.thr 86%, util ~21%.)
+- **DefiLlama coins** `https://coins.llama.fi/prices/current/mantle:0x<addr>` (keyless) — USD pricing for depth/borrow.
+- **Depth methodology:** Uniswap-v2 pairs (Merchant Moe classic) → exact ±2%-of-mid USD via constant-product `getReserves`; DefiLlama pool TVL as a labelled liquidity proxy for v3 / Liquidity-Book venues (no precise ±2% claimed). Fragmentation = HHI over per-venue USD liquidity.
+- **Composite:** weighted partial (reachability .25, depth .2, fragmentation .15, borrowability .2, compliance .2), renormalised over computed sub-scores, **excludes cross-chain (Phase 4)** — labelled as such.
+
 ---
 
 ## §6. Open items to close (non-blocking for architecture lock)
