@@ -86,3 +86,26 @@ tools. No logic duplicated between engine and agent.
 pnpm workspaces + Turborepo. `/agent` (TS core lib), `/web` (Next.js + API routes, Vercel),
 `/mcp` (MCP server over `/agent`), `/contracts` (Foundry, only if deploying), `/skill` (SKILL.md
 wrapping MCP), `/docs`. Packages join the workspace as they gain a `package.json`.
+
+### D14 — UI: faithful brutalist design port, every panel wired to live data, honest gaps
+**Date:** 2026-06-26. **Status:** locked.
+The Claude Design mockup (`web/design/Mantleflow.dc.html` — black/paper/acid-green, Bricolage
+Grotesque + IBM Plex) is ported to React/Tailwind: a landing site (`/`) and a two-stage app
+(`/app`: ask-home + 5-tab workspace — Overview/Distribution/Liquidity/Routes/Gates). The mockup's
+mock data (mTBILL/wGOLD, per-jurisdiction tables, fabricated routes/stats) is **discarded**; every
+panel binds to the real `DistributionMap`. Where the backend can't source something yet it renders
+an honest state, not a fabrication: **Routes** = not-yet-computed (Phase 4); **Gates** reports the
+detected on-chain mechanism + evidence and explicitly omits any jurisdiction breakdown (can't be
+source-verified from a contract); the **landing stat band** uses true facts (6 assets / 5 live
+sub-scores / source-receipted) and the **product preview** is a live `/api/map` read of mETH with a
+graceful "unavailable" shell if the read fails. Every displayed datum carries a `<SourceTag>`
+receipt (accuracy is judged → receipts are a feature). New `GET /api/map?symbol=` serves no-LLM map
+reads for fast asset/tab switching; `/api/query` still serves the NL answer.
+
+### D15 — Borrowability stays Lendle-only; per-$250k slippage = constant-product, CPMM venues only
+**Date:** 2026-06-26. **Status:** locked.
+Added real per-order clearing slippage (`agent/src/dex/slippage.ts`): exact constant-product price
+impact for a $250k exit, computed only for `cpmm-exact` venues (we hold their on-chain reserves);
+TVL-proxy venues (v3 / Liquidity Book) report `null` → the UI shows "—" rather than an unsourced
+number. Surfaced as the Overview "BEST SLIP / $250k" stat (min across CPMM venues) and the Liquidity
+table's SLIP/250K column. No change to composite weighting.
