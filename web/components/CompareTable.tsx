@@ -67,7 +67,9 @@ export function CompareTable({ maps }: { maps: DistributionMap[] }) {
       </table>
       <p className="px-3 py-2 text-[11px] text-zinc-600">
         Each cell is a 0–100 sub-score from live Mantle data; hover for the sourced explanation.
-        Score = weighted partial composite (cross-chain excluded — Phase 4).
+        Score = weighted partial composite (cross-chain excluded — Phase 4). A “—” under Compliance
+        means it wasn’t source-verified in this batch run — open that asset above for its full,
+        source-verified gating (e.g. MI4’s Securitize allowlist).
       </p>
     </div>
   );
