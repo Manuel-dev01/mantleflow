@@ -26,3 +26,5 @@ contracts/broadcast/**/dry-run/
 # misc
 coverage/
 *.tsbuildinfo
+
+.vercel
