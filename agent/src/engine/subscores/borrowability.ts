@@ -6,7 +6,19 @@ import { clamp } from "./util.js";
 /** Borrowability sub-score from a Lendle reserve read. Not-listed is a finding, scored 0. */
 export function borrowabilitySubScore(reserve: Sourced<LendleReserve>): SubScore {
   const r = reserve.value;
-  const inputs: Sourced<unknown>[] = [{ value: r, receipt: reserve.receipt }];
+  // Serializable summary (no BigInt) — the raw reserve's bigint fields must not reach JSON.
+  const summary = {
+    listed: r.listed,
+    usageAsCollateralEnabled: r.usageAsCollateralEnabled,
+    borrowingEnabled: r.borrowingEnabled,
+    ltvPct: r.ltvPct,
+    liquidationThresholdPct: r.liquidationThresholdPct,
+    supplyAprPct: r.supplyAprPct,
+    variableBorrowAprPct: r.variableBorrowAprPct,
+    utilizationPct: r.utilizationPct,
+    isFrozen: r.isFrozen,
+  };
+  const inputs: Sourced<unknown>[] = [{ value: summary, receipt: reserve.receipt }];
 
   if (!r.listed) {
     return {
