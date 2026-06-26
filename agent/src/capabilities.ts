@@ -41,15 +41,11 @@ export function createCapabilities(config: AppConfig): Capabilities {
     ? createEtherscanAdapter(config.etherscanApiKey)
     : null;
 
-  const NO_GATE = (ts: string): Sourced<ComplianceGate> => ({
-    value: { isGated: false, mechanism: null, evidence: [] },
-    receipt: {
-      sourceName: "n/a",
-      url: "",
-      observedAt: ts,
-      kind: "assumption",
-      note: "ETHERSCAN_API_KEY not set — compliance not source-verified",
-    },
+  // Used when compliance CANNOT be determined (no key, or Etherscan failed). `determined:false`
+  // → the sub-score reports insufficient-data rather than a false "freely transferable".
+  const UNKNOWN_GATE = (ts: string, why: string): Sourced<ComplianceGate> => ({
+    value: { determined: false, isGated: false, mechanism: null, evidence: [] },
+    receipt: { sourceName: "n/a", url: "", observedAt: ts, kind: "assumption", note: why },
   });
 
   function rpcFor(network: MantleNetwork): string {
@@ -123,8 +119,10 @@ export function createCapabilities(config: AppConfig): Capabilities {
           }),
         ),
         etherscan
-          ? checkComplianceGate(client, network, addr, etherscan, ts).catch(() => NO_GATE(ts))
-          : Promise.resolve(NO_GATE(ts)),
+          ? checkComplianceGate(client, network, addr, etherscan, ts).catch(() =>
+              UNKNOWN_GATE(ts, "Etherscan compliance check failed (rate limit / transient)"),
+            )
+          : Promise.resolve(UNKNOWN_GATE(ts, "ETHERSCAN_API_KEY not set — compliance not source-verified")),
       ]);
 
       return assembleDistributionMap({

@@ -28,6 +28,17 @@ function reachabilitySubScore(r: ReachabilityResult): SubScore {
 
 function complianceSubScore(g: Sourced<ComplianceGate>): SubScore {
   const gate = g.value;
+  if (!gate.determined) {
+    return {
+      id: "compliance",
+      label: "Compliance gating",
+      status: "insufficient-data",
+      value: null,
+      explanation:
+        "Compliance could not be source-verified (Etherscan unavailable). Not reported as gated or ungated — we do not guess.",
+      inputs: [{ value: { determined: false }, receipt: g.receipt }],
+    };
+  }
   return {
     id: "compliance",
     label: "Compliance gating",
@@ -114,13 +125,14 @@ export function assembleDistributionMap(input: AssembleInput): DistributionMap {
 
   const comp = composite(subScores);
 
+  const gate = input.compliance.value;
   const headlines: string[] = [];
+  if (gate.determined && gate.isGated) headlines.push(`Holder gated by ${gate.mechanism}`);
   if (input.reachability.noSecondaryMarket) headlines.push("No on-chain secondary venue found");
-  if (input.compliance.value.isGated)
-    headlines.push(`Holder gated by ${input.compliance.value.mechanism}`);
   if (!input.borrow.value.listed) headlines.push("Not borrowable on Lendle");
   if (headlines.length === 0 && !input.reachability.noSecondaryMarket)
     headlines.push("Freely transferable with a live secondary venue");
+  if (headlines.length === 0) headlines.push("Distribution analysis complete");
 
   return {
     asset: input.asset,

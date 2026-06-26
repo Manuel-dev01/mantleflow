@@ -39,7 +39,7 @@ describe("assembleDistributionMap", () => {
       liquidity: emptyLiquidity,
       borrow: notListed(),
       compliance: {
-        value: { isGated: true, mechanism: "Securitize DS-Token transfer-agent allowlist", evidence: [] },
+        value: { determined: true, isGated: true, mechanism: "Securitize DS-Token transfer-agent allowlist", evidence: [] },
         receipt: rcpt,
       },
       generatedAt: ts,
@@ -59,6 +59,21 @@ describe("assembleDistributionMap", () => {
     expect(map.composite).not.toBeNull();
     expect(map.composite!).toBeLessThan(20);
     expect(map.compositeNote).toMatch(/partial/i);
+  });
+
+  it("undetermined compliance → insufficient-data, never a false 'freely transferable'", () => {
+    const map = assembleDistributionMap({
+      asset,
+      reachability: { venues: [], noSecondaryMarket: true },
+      liquidity: emptyLiquidity,
+      borrow: notListed(),
+      compliance: { value: { determined: false, isGated: false, mechanism: null, evidence: [] }, receipt: rcpt },
+      generatedAt: ts,
+    });
+    const c = map.subScores.find((s) => s.id === "compliance")!;
+    expect(c.status).toBe("insufficient-data");
+    expect(c.value).toBeNull();
+    expect(map.headlines.join(" ")).not.toMatch(/freely transferable/i);
   });
 
   it("liquid asset: venues + collateral → higher composite", () => {
@@ -81,7 +96,7 @@ describe("assembleDistributionMap", () => {
         value: { ...notListed().value, listed: true, usageAsCollateralEnabled: true, borrowingEnabled: true, ltvPct: 70, liquidationThresholdPct: 75, supplyAprPct: 2.1, variableBorrowAprPct: 3.4, utilizationPct: 40, reserveDecimals: 18 },
         receipt: rcpt,
       },
-      compliance: { value: { isGated: false, mechanism: null, evidence: [] }, receipt: rcpt },
+      compliance: { value: { determined: true, isGated: false, mechanism: null, evidence: [] }, receipt: rcpt },
       generatedAt: ts,
     };
     const map = assembleDistributionMap(input);

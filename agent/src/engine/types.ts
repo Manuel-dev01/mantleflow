@@ -51,6 +51,8 @@ export interface DistributionMap {
 
 /** A detected compliance/transfer-restriction gate on a token. */
 export interface ComplianceGate {
+  /** False when the check could not run (e.g. Etherscan unavailable) — then isGated is meaningless. */
+  determined: boolean;
   isGated: boolean;
   /** e.g. "Securitize DS-Token transfer-agent allowlist", "ERC-1404 transfer restriction". */
   mechanism: string | null;

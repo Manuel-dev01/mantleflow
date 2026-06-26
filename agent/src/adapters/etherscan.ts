@@ -43,7 +43,17 @@ export function createEtherscanAdapter(apiKey: string): EtherscanAdapter {
       const url =
         `${V2_BASE}?chainid=${chainId(network)}&module=contract&action=getsourcecode` +
         `&address=${address}&apikey=${apiKey}`;
-      const res = await fetchJson<SourceCodeResponse>(url, { ttlMs: 10 * 60_000 });
+
+      // Etherscan signals rate limits with HTTP 200 + status "0" (so fetchJson's HTTP retry can't
+      // see them). Retry a few times with backoff before giving up. Cache only successful results.
+      let res!: SourceCodeResponse;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        res = await fetchJson<SourceCodeResponse>(url, { ttlMs: 0 });
+        const rateLimited =
+          res.status !== "1" && /rate limit|max .*calls|too many/i.test(String(res.result ?? res.message));
+        if (!rateLimited) break;
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      }
       const row = Array.isArray(res.result) ? res.result[0] : undefined;
       if (res.status !== "1" || !row) {
         throw new Error(`Etherscan V2 getsourcecode failed: ${res.message} (${String(res.result)})`);

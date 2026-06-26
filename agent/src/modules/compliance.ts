@@ -94,6 +94,7 @@ export async function checkComplianceGate(
   }
 
   const gate: ComplianceGate = {
+    determined: true,
     isGated: mechanisms.length > 0,
     mechanism: mechanisms[0] ?? null,
     evidence,
