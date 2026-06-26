@@ -130,8 +130,10 @@ export function assembleDistributionMap(input: AssembleInput): DistributionMap {
   if (gate.determined && gate.isGated) headlines.push(`Holder gated by ${gate.mechanism}`);
   if (input.reachability.noSecondaryMarket) headlines.push("No on-chain secondary venue found");
   if (!input.borrow.value.listed) headlines.push("Not borrowable on Lendle");
-  if (headlines.length === 0 && !input.reachability.noSecondaryMarket)
+  if (headlines.length === 0 && gate.determined && !gate.isGated && !input.reachability.noSecondaryMarket)
     headlines.push("Freely transferable with a live secondary venue");
+  if (headlines.length === 0 && !input.reachability.noSecondaryMarket)
+    headlines.push("Has a live secondary venue"); // compliance undetermined — don't assert transferability
   if (headlines.length === 0) headlines.push("Distribution analysis complete");
 
   return {

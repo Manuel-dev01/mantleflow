@@ -21,6 +21,22 @@ interface EtherscanResponse<T> {
 
 type SourceCodeResponse = EtherscanResponse<Array<Record<string, string>>>;
 
+// Etherscan's free tier limits to ~5 req/s. The compare view fans out 6 assets at once; cap
+// concurrent Etherscan calls so the burst stays under the limit and every gate resolves.
+const MAX_CONCURRENT = 2;
+let active = 0;
+const waiters: Array<() => void> = [];
+async function withLimit<T>(fn: () => Promise<T>): Promise<T> {
+  if (active >= MAX_CONCURRENT) await new Promise<void>((res) => waiters.push(res));
+  active++;
+  try {
+    return await fn();
+  } finally {
+    active--;
+    waiters.shift()?.();
+  }
+}
+
 export interface ContractSource {
   contractName: string;
   abi: string; // JSON string, or "Contract source code not verified"
@@ -45,15 +61,19 @@ export function createEtherscanAdapter(apiKey: string): EtherscanAdapter {
         `&address=${address}&apikey=${apiKey}`;
 
       // Etherscan signals rate limits with HTTP 200 + status "0" (so fetchJson's HTTP retry can't
-      // see them). Retry a few times with backoff before giving up. Cache only successful results.
-      let res!: SourceCodeResponse;
-      for (let attempt = 0; attempt < 4; attempt++) {
-        res = await fetchJson<SourceCodeResponse>(url, { ttlMs: 0 });
-        const rateLimited =
-          res.status !== "1" && /rate limit|max .*calls|too many/i.test(String(res.result ?? res.message));
-        if (!rateLimited) break;
-        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
-      }
+      // see them). Run under a concurrency cap and retry with backoff before giving up.
+      const res = await withLimit(async () => {
+        let r!: SourceCodeResponse;
+        for (let attempt = 0; attempt < 5; attempt++) {
+          r = await fetchJson<SourceCodeResponse>(url, { ttlMs: 0 });
+          const rateLimited =
+            r.status !== "1" &&
+            /rate limit|max .*calls|too many/i.test(String(r.result ?? r.message));
+          if (!rateLimited) break;
+          await new Promise((res2) => setTimeout(res2, 400 * (attempt + 1)));
+        }
+        return r;
+      });
       const row = Array.isArray(res.result) ? res.result[0] : undefined;
       if (res.status !== "1" || !row) {
         throw new Error(`Etherscan V2 getsourcecode failed: ${res.message} (${String(res.result)})`);
