@@ -79,8 +79,8 @@ describe("assembleDistributionMap", () => {
   it("liquid asset: venues + collateral → higher composite", () => {
     const liquidity: LiquidityResult = {
       venues: [
-        { venue: "Merchant Moe ·/USDC", liquidityUsd: 5_000_000, depthUsdAt2pct: 49_750, method: "cpmm-exact", receipt: rcpt },
-        { venue: "Agni pool", liquidityUsd: 3_000_000, depthUsdAt2pct: null, method: "tvl-proxy", receipt: rcpt },
+        { venue: "Merchant Moe ·/USDC", liquidityUsd: 5_000_000, depthUsdAt2pct: 49_750, slipPctAt250k: 4.76, method: "cpmm-exact", receipt: rcpt },
+        { venue: "Agni pool", liquidityUsd: 3_000_000, depthUsdAt2pct: null, slipPctAt250k: null, method: "tvl-proxy", receipt: rcpt },
       ],
       totalLiquidityUsd: 8_000_000,
       totalDepthUsdAt2pct: 49_750,

@@ -10,6 +10,7 @@ const venue = (liquidityUsd: number) => ({
   venue: "v",
   liquidityUsd,
   depthUsdAt2pct: null,
+  slipPctAt250k: null,
   method: "tvl-proxy" as const,
   receipt: rcpt,
 });

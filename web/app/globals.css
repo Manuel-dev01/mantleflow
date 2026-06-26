@@ -6,39 +6,84 @@
   color-scheme: dark;
 }
 
+html,
 body {
-  background: #0a0b0d;
-  color: #e6e8eb;
+  margin: 0;
+  padding: 0;
 }
 
-/* Lightweight markdown styling for the agent answer */
+body {
+  background: #0a0a0a; /* ink */
+  color: #f3f3ee; /* paper */
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #c8f24e; /* acid */
+  color: #0a0a0a;
+}
+
+/* Markdown styling for the agent answer — paper/acid brutalist, not the old teal. */
 .answer h1,
-.answer h2 {
+.answer h2,
+.answer h3 {
+  font-family: var(--font-display), sans-serif;
   font-weight: 700;
-  margin: 1rem 0 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin: 1.1rem 0 0.5rem;
 }
 .answer h2 {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+}
+.answer h3 {
+  font-size: 1rem;
 }
 .answer p {
   margin: 0.5rem 0;
   line-height: 1.6;
 }
+.answer ul,
+.answer ol {
+  margin: 0.5rem 0 0.5rem 1.25rem;
+}
 .answer ul {
   list-style: disc;
-  margin: 0.5rem 0 0.5rem 1.25rem;
+}
+.answer ol {
+  list-style: decimal;
+}
+.answer a {
+  color: #c8f24e;
+  text-decoration: underline;
+}
+.answer code {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.85em;
+  background: #2a2a28;
+  padding: 0.1em 0.35em;
 }
 .answer table {
   width: 100%;
   border-collapse: collapse;
   margin: 0.75rem 0;
+  font-size: 0.9em;
 }
 .answer th,
 .answer td {
-  border: 1px solid #23262d;
-  padding: 0.4rem 0.6rem;
+  border: 2px solid #2a2a28;
+  padding: 0.45rem 0.65rem;
   text-align: left;
+}
+.answer th {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9a9a93;
 }
 .answer strong {
   color: #fff;
+  font-weight: 700;
 }

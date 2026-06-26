@@ -1,6 +1,7 @@
 import { type Address, type PublicClient, getAddress, zeroAddress } from "viem";
 import { type MantleNetwork, explorerBaseFor } from "../config/chains.js";
 import { MANTLE_DEX_FACTORIES, QUOTE_TOKENS } from "./factories.js";
+import { cpmmSlippagePct, STANDARD_CLEAR_SIZE_USD } from "./slippage.js";
 import { hasCode } from "../lib/onchain.js";
 import type { DefiLlamaAdapter } from "../adapters/defillama.js";
 import type { PriceAdapter } from "../adapters/prices.js";
@@ -17,6 +18,8 @@ export interface VenueLiquidity {
   venue: string;
   liquidityUsd: number;
   depthUsdAt2pct: number | null;
+  /** Constant-product price impact (%) to clear a $250k order; null for TVL-proxy venues. */
+  slipPctAt250k: number | null;
   method: "cpmm-exact" | "tvl-proxy";
   receipt: SourceReceipt;
 }
@@ -111,13 +114,16 @@ export async function analyzeLiquidity(
         venue: `${factory.name} ·/${quote.symbol}`,
         liquidityUsd: quoteReserveUsd * 2, // balanced pool ≈ 2× one side
         depthUsdAt2pct: quoteReserveUsd * TWO_PCT_FRACTION,
+        // Selling the asset moves price against the asset reserve (≈ quote reserve in USD for a
+        // balanced pool) — exact CPMM impact for a $250k exit.
+        slipPctAt250k: cpmmSlippagePct(quoteReserveUsd, STANDARD_CLEAR_SIZE_USD),
         method: "cpmm-exact",
         receipt: {
           sourceName: "Mantle RPC (getReserves)",
           url: `${explorer}/address/${pair}`,
           observedAt,
           kind: "fact",
-          note: `${factory.name} reserves; quote ${quote.symbol} @ $${quotePrice} (DefiLlama)`,
+          note: `${factory.name} reserves; quote ${quote.symbol} @ $${quotePrice} (DefiLlama); $250k slip via constant-product`,
         },
       });
     }
@@ -130,6 +136,7 @@ export async function analyzeLiquidity(
       venue: `${p.project} ${p.symbol}`,
       liquidityUsd: p.tvlUsd,
       depthUsdAt2pct: null,
+      slipPctAt250k: null,
       method: "tvl-proxy",
       receipt: { ...pools.receipt, note: `DefiLlama pool ${p.pool} · TVL $${Math.round(p.tvlUsd)}` },
     });
