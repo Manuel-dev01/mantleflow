@@ -23,7 +23,7 @@ type SourceCodeResponse = EtherscanResponse<Array<Record<string, string>>>;
 
 // Etherscan's free tier limits to ~5 req/s. The compare view fans out 6 assets at once; cap
 // concurrent Etherscan calls so the burst stays under the limit and every gate resolves.
-const MAX_CONCURRENT = 2;
+const MAX_CONCURRENT = 1;
 let active = 0;
 const waiters: Array<() => void> = [];
 async function withLimit<T>(fn: () => Promise<T>): Promise<T> {
@@ -61,16 +61,17 @@ export function createEtherscanAdapter(apiKey: string): EtherscanAdapter {
         `&address=${address}&apikey=${apiKey}`;
 
       // Etherscan signals rate limits with HTTP 200 + status "0" (so fetchJson's HTTP retry can't
-      // see them). Run under a concurrency cap and retry with backoff before giving up.
+      // see them). Serialise calls (cap 1) and retry on any non-success with backoff. Successful
+      // responses are cached 10 min (cacheIf) so warmed assets stay resolved across requests.
       const res = await withLimit(async () => {
         let r!: SourceCodeResponse;
-        for (let attempt = 0; attempt < 5; attempt++) {
-          r = await fetchJson<SourceCodeResponse>(url, { ttlMs: 0 });
-          const rateLimited =
-            r.status !== "1" &&
-            /rate limit|max .*calls|too many/i.test(String(r.result ?? r.message));
-          if (!rateLimited) break;
-          await new Promise((res2) => setTimeout(res2, 400 * (attempt + 1)));
+        for (let attempt = 0; attempt < 6; attempt++) {
+          r = await fetchJson<SourceCodeResponse>(url, {
+            ttlMs: 10 * 60_000,
+            cacheIf: (v) => v.status === "1",
+          });
+          if (r.status === "1") break;
+          await new Promise((res2) => setTimeout(res2, 350 * (attempt + 1)));
         }
         return r;
       });

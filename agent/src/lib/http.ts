@@ -11,7 +11,7 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
-export interface FetchJsonOptions {
+export interface FetchJsonOptions<T = unknown> {
   /** Cache TTL in ms. 0 disables caching for this call. Default 60_000. */
   ttlMs?: number;
   /** Max retries on network error / 429 / 5xx. Default 3. */
@@ -19,6 +19,8 @@ export interface FetchJsonOptions {
   headers?: Record<string, string>;
   /** Abort if the request takes longer than this (ms). Default 20_000. */
   timeoutMs?: number;
+  /** Only cache the result when this predicate is true (e.g. an API's status === "1"). */
+  cacheIf?: (value: T) => boolean;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -27,9 +29,9 @@ function sleep(ms: number): Promise<void> {
 
 export async function fetchJson<T = unknown>(
   url: string,
-  opts: FetchJsonOptions = {},
+  opts: FetchJsonOptions<T> = {},
 ): Promise<T> {
-  const { ttlMs = 60_000, retries = 3, headers, timeoutMs = 20_000 } = opts;
+  const { ttlMs = 60_000, retries = 3, headers, timeoutMs = 20_000, cacheIf } = opts;
   const key = url + (headers ? JSON.stringify(headers) : "");
 
   if (ttlMs > 0) {
@@ -53,7 +55,9 @@ export async function fetchJson<T = unknown>(
         throw new Error(`HTTP ${res.status} from ${hostOf(url)} (non-retryable)`);
       }
       const value = (await res.json()) as T;
-      if (ttlMs > 0) cache.set(key, { expiresAt: Date.now() + ttlMs, value });
+      if (ttlMs > 0 && (!cacheIf || cacheIf(value))) {
+        cache.set(key, { expiresAt: Date.now() + ttlMs, value });
+      }
       return value;
     } catch (err) {
       clearTimeout(timer);
