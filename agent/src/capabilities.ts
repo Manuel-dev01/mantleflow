@@ -136,12 +136,19 @@ export function createCapabilities(config: AppConfig): Capabilities {
     },
 
     async compareAssets() {
-      const symbols = Object.keys(TRACKED_ASSETS);
-      const settled = await Promise.allSettled(symbols.map((s) => this.buildDistributionMap(s)));
-      // One asset failing (e.g. a transient RPC error) must not sink the whole comparison.
-      return settled
-        .filter((r): r is PromiseFulfilledResult<DistributionMap> => r.status === "fulfilled")
-        .map((r) => r.value);
+      // Sequential, not Promise.all: 6 parallel builds would fire 6 large DefiLlama /pools
+      // downloads + 6 Etherscan bursts at once, saturating the function and starving compliance.
+      // Doing them in order lets asset 1 warm the shared caches; the rest reuse them and the
+      // Etherscan calls spread out under the rate limit. One failure must not sink the rest.
+      const maps: DistributionMap[] = [];
+      for (const s of Object.keys(TRACKED_ASSETS)) {
+        try {
+          maps.push(await this.buildDistributionMap(s));
+        } catch {
+          /* skip a transiently-failing asset */
+        }
+      }
+      return maps;
     },
 
     trackedSymbols() {
