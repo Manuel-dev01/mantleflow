@@ -2,6 +2,8 @@
 
 **An AI research agent that maps the _distribution_ of tokenized / real-world assets on Mantle — not their issuance.**
 
+🔗 **Live:** https://mantleflow.vercel.app — ask *"I hold $1M of MI4 — where can I exit it, and am I gated?"* and get a real, source-receipted answer from live Mantle data.
+
 For any Mantle-native RWA or capital-market asset, MantleFlow answers in natural language:
 *where can this asset actually be bought, sold, borrowed against, and bridged — and who is gated from
 holding it?* It surfaces secondary-market reachability, liquidity depth & fragmentation, lending
@@ -31,8 +33,11 @@ A finding of *"no secondary market"* or *"holder is gated"* is a headline result
 ```
 
 ## Status
-Phase 0 (verification gate) complete — architecture locked. See `docs/VERIFIED.md` and
-`docs/DECISIONS.md`. Building Phase 1: the MI4 vertical slice.
+**Phase 1 complete & deployed** (the MI4 vertical slice, live on Vercel). The agent reads live
+Mantle data via a DeepSeek tool-use loop and returns the headline thesis result for MI4: **no
+on-chain secondary venue** + a **Securitize DS-Token transfer-agent gate**, every datum
+source-receipted. Phase 0 verification gate is locked in `docs/VERIFIED.md` / `docs/DECISIONS.md`.
+Next: Phase 2 breadth (mETH/cmETH, fBTC, USDe, USDY, syrupUSDT) + depth/fragmentation/borrowability.
 
 ## Accuracy discipline
 Every displayed number is traceable to a primary source with a timestamp. See `docs/VERIFIED.md`.
