@@ -9,7 +9,10 @@ export const maxDuration = 60;
 /** JSON response that tolerates BigInt (serialised as a string). */
 function jsonSafe(data: unknown, status = 200): NextResponse {
   const body = JSON.stringify(data, (_k, v) => (typeof v === "bigint" ? v.toString() : v));
-  return new NextResponse(body, { status, headers: { "content-type": "application/json" } });
+  return new NextResponse(body, {
+    status,
+    headers: { "content-type": "application/json", "cache-control": "no-store" },
+  });
 }
 
 export async function POST(req: Request) {
