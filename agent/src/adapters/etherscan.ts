@@ -64,16 +64,22 @@ export function createEtherscanAdapter(apiKey: string): EtherscanAdapter {
       // see them). Serialise calls (cap 1) and retry on any non-success with backoff. Successful
       // responses are cached 10 min (cacheIf) so warmed assets stay resolved across requests.
       const res = await withLimit(async () => {
-        let r!: SourceCodeResponse;
-        for (let attempt = 0; attempt < 4; attempt++) {
-          r = await fetchJson<SourceCodeResponse>(url, {
-            ttlMs: 10 * 60_000,
-            cacheIf: (v) => v.status === "1",
-          });
-          if (r.status === "1") break;
+        let r: SourceCodeResponse | undefined;
+        let lastErr: unknown;
+        for (let attempt = 0; attempt < 5; attempt++) {
+          try {
+            r = await fetchJson<SourceCodeResponse>(url, {
+              ttlMs: 10 * 60_000,
+              cacheIf: (v) => v.status === "1",
+            });
+            if (r.status === "1") return r;
+          } catch (err) {
+            lastErr = err; // network throw (e.g. fetch failed under concurrency) — retry
+          }
           await new Promise((res2) => setTimeout(res2, 350 * (attempt + 1)));
         }
-        return r;
+        if (r) return r;
+        throw lastErr ?? new Error("Etherscan request failed");
       });
       const row = Array.isArray(res.result) ? res.result[0] : undefined;
       if (res.status !== "1" || !row) {
