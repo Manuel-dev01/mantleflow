@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { DistributionMap } from "@mantleflow/agent";
-import { runQuery, getMap } from "../../lib/api";
+import { getMap } from "../../lib/api";
 import { ASSETS } from "../../lib/assets";
 import { AskHome } from "../../components/app/AskHome";
 import { Workspace, type TabId } from "../../components/app/Workspace";
@@ -35,20 +35,21 @@ export default function AppPage() {
     setQuery(exampleFor(sym));
   }
 
-  // Full NL query → LLM answer + map. Used on RUN from the ask-home.
+  // RUN loads the asset's distribution map for FREE (no LLM). The natural-language AI deep-dive is
+  // the x402-paid premium action inside the Overview tab. Resolve the asset from the query or chip.
   async function run(q: string) {
+    const sym = ASSETS.find((s) => q.toLowerCase().includes(s.toLowerCase())) ?? asset;
     setLoading(true);
     setError(null);
     setView("workspace");
     setTab("overview");
     setAnswer(null);
+    setAsset(sym);
+    setRecent((r) => [{ q, t: "now" }, ...r].slice(0, 4));
     try {
-      const res = await runQuery(q);
+      const res = await getMap(sym);
       if (res.error) setError(res.error);
       setMap(res.map ?? null);
-      setAnswer(res.answer ?? null);
-      if (res.map) setAsset(res.map.asset.symbol);
-      setRecent((r) => [{ q, t: "now" }, ...r].slice(0, 4));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

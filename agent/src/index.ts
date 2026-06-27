@@ -40,3 +40,19 @@ export {
   type AttestInput,
 } from "./erc8004/client.js";
 export { IDENTITY_ABI, REPUTATION_ABI, PROVENANCE_TAG1 } from "./erc8004/abis.js";
+export {
+  requirePayment,
+  x402Active,
+  buildChallenge,
+  verifyAndSettle,
+  decodePayment,
+  X402_NETWORKS,
+  X402_ASSET_DOMAIN,
+  X402_VERSION,
+  type PaymentGate,
+  type X402Challenge,
+  type X402Accept,
+  type PaymentPayload,
+  type Authorization,
+  type Settlement,
+} from "./x402/index.js";

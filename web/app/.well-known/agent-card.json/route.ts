@@ -46,6 +46,18 @@ export async function GET() {
         agentId,
       },
     },
+    // x402 paid endpoint discovery — agents can pay-per-query via the EIP-3009 "exact" scheme.
+    x402: process.env.X402_ASSET
+      ? {
+          scheme: "exact",
+          resource: `${ORIGIN}/api/query`,
+          network: (process.env.X402_NETWORK ?? "sepolia") === "mainnet" ? "eip155:5000" : "eip155:5003",
+          asset: process.env.X402_ASSET,
+          payTo: process.env.X402_PAY_TO ?? null,
+          maxAmountRequired: process.env.X402_PRICE ?? "10000",
+          note: "Testnet tmUSD on Mantle Sepolia; gasless EIP-3009 transferWithAuthorization.",
+        }
+      : null,
   };
   return NextResponse.json(card, { headers: { "cache-control": "public, max-age=300" } });
 }

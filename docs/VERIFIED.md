@@ -107,9 +107,23 @@ Remaining open items are tracked in §6 (non-blocking).
 - **Facilitator** — QuestFlow `https://facilitator.questflow.ai` (verify → settle). Mantle x402
   gateway announced live (@Mantle_Official, @questflow). Exact `/verify`·`/settle` JSON schemas
   **PARTIAL** → confirm against live facilitator in Phase 4. — 2026-06-25.
-- **Settlement asset** — **USDC on Mantle mainnet** `0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9`
+- **Settlement asset (production)** — **USDC on Mantle mainnet** `0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9`
   (ON-CHAIN VERIFIED 2026-06-25: code present, 3516-hex bytecode; EIP-3009 per Circle v2). CAIP-2
   network id `eip155:5000`. Mantle is **not** in Coinbase CDP's facilitator list → use QuestFlow.
+- **QuestFlow key access (2026-06-27)** — apply via `https://forms.gle/SRdxu8yaQYVj85Jh9`; auth =
+  `Authorization: Bearer ${FACILITATOR_API_KEY}`; endpoints `/verify`·`/settle`·`/supported`·`/list`.
+  Pluggable via env (`QUESTFLOW_API_KEY`); not required for the Sepolia demo.
+- **x402 LIVE (Sepolia demo, 2026-06-27)** — deployed our own EIP-3009 test stablecoin **tmUSD
+  `0x246e485a5966b19871f3e9297182f8cb49fd8242`** (Mantle Sepolia, 6 decimals, public faucet `mint`;
+  deploy tx `0x486276b9fdc2661fe5c8d7e4313f3a92d78a1fc5afa8e1602c500b6171a86c60`). **Self-settle
+  confirmed end-to-end** (mint → buyer signs EIP-3009 → server `transferWithAuthorization` → balances
+  moved exactly; replay rejected): sample settlement tx
+  `0xc01c89ddf1ebc10fa246e68bba442863455c8e18c6c6257088e1bb14f9e6910a`. EIP-712 domain
+  `{name:"MantleFlow Test USD", version:"1", chainId:5003, verifyingContract:tmUSD}`. `X-PAYMENT` =
+  base64 `{x402Version:1, scheme:"exact", network:"eip155:5003", payload:{signature, authorization:
+  {from,to,value,validAfter,validBefore,nonce}}}`. Gate = `/api/query` only; basic tier free.
+- **Note** — the public `rpc.sepolia.mantle.xyz` was intermittently timing out 2026-06-27; switched
+  Sepolia reads/writes to the Alchemy endpoint (`MANTLE_SEPOLIA_RPC`) for reliability.
 
 ## 6. Tracked assets — on-chain verified
 

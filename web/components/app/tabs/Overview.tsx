@@ -5,13 +5,16 @@ import ReactMarkdown from "react-markdown";
 import type { DistributionMap } from "@mantleflow/agent";
 import { overviewStats } from "../../../lib/derive";
 import { attest, type AttestResponse } from "../../../lib/api";
+import { payAndRunQuery, type DeepDiveResult, type DeepDiveStep } from "../../../lib/x402";
 import { SourceTag } from "../../SourceTag";
 
 /**
- * Overview = the agent's plain-language answer (real LLM output when present, else the engine's own
- * headlines) + four real summary stats, each with a source receipt.
+ * Overview = the engine's headlines (free) + four real stats, plus an x402-gated "AI deep-dive"
+ * (premium LLM analysis paid in testnet tmUSD). Free browsing for everyone; the LLM narrative is paid.
  */
 export function OverviewTab({ map, answer }: { map: DistributionMap; answer: string | null }) {
+  const [deep, setDeep] = useState<DeepDiveResult | null>(null);
+  const shownAnswer = deep?.answer ?? answer;
   const s = overviewStats(map);
   const cells = [
     { k: "VENUES", v: s.venues.value, tone: s.venues.tone, receipt: s.venues.receipt },
@@ -27,15 +30,17 @@ export function OverviewTab({ map, answer }: { map: DistributionMap; answer: str
         <span className="font-mono text-xs tracking-[0.1em] text-mut">AGENT ANSWER</span>
       </div>
 
-      {answer ? (
-        <div className="answer mb-10 max-w-[920px] font-display text-[clamp(20px,2.4vw,30px)] font-medium leading-[1.3]">
-          <ReactMarkdown>{answer}</ReactMarkdown>
+      {shownAnswer ? (
+        <div className="answer mb-6 max-w-[920px] font-display text-[clamp(20px,2.4vw,30px)] font-medium leading-[1.3]">
+          <ReactMarkdown>{shownAnswer}</ReactMarkdown>
         </div>
       ) : (
-        <p className="m-0 mb-10 max-w-[920px] font-display text-[clamp(22px,2.6vw,34px)] font-medium leading-[1.28] tracking-[-0.01em]">
+        <p className="m-0 mb-6 max-w-[920px] font-display text-[clamp(22px,2.6vw,34px)] font-medium leading-[1.28] tracking-[-0.01em]">
           {map.headlines.join(". ")}.
         </p>
       )}
+
+      <DeepDiveBlock map={map} done={!!shownAnswer} settlement={deep?.settlement} onResult={setDeep} />
 
       <div className="grid grid-cols-2 border-2 border-paper md:grid-cols-4">
         {cells.map((c, i) => (
@@ -70,6 +75,88 @@ export function OverviewTab({ map, answer }: { map: DistributionMap; answer: str
       </div>
 
       <AttestBlock map={map} />
+    </div>
+  );
+}
+
+const STEP_LABEL: Record<DeepDiveStep, string> = {
+  idle: "",
+  requesting: "REQUESTING…",
+  connecting: "CONNECT WALLET…",
+  funding: "MINTING TEST tmUSD…",
+  signing: "SIGN PAYMENT…",
+  settling: "SETTLING + ANALYSING…",
+};
+
+/**
+ * x402 premium: the LLM "deep-dive" analysis, paid in testnet tmUSD via a real EIP-3009 settlement.
+ * Free browsing stays free; this is the only gated action. Gasless + no real funds.
+ */
+function DeepDiveBlock({
+  map,
+  done,
+  settlement,
+  onResult,
+}: {
+  map: DistributionMap;
+  done: boolean;
+  settlement?: DeepDiveResult["settlement"];
+  onResult: (r: DeepDiveResult) => void;
+}) {
+  const [step, setStep] = useState<DeepDiveStep>("idle");
+  const [err, setErr] = useState<string | null>(null);
+
+  const query =
+    map.asset.symbol === "MI4"
+      ? "I hold $1M of MI4 — where can I exit it, what can I borrow against it, and am I gated?"
+      : `Map the distribution of ${map.asset.symbol} on Mantle: trading venues, liquidity depth, borrowability, cross-chain reach, and compliance.`;
+
+  async function run() {
+    setErr(null);
+    try {
+      const r = await payAndRunQuery(query, setStep);
+      if (r.error) setErr(r.error);
+      else onResult(r);
+    } catch (e) {
+      const m = e instanceof Error ? e.message : String(e);
+      setErr(/user rejected|denied/i.test(m) ? "Signature rejected." : m.split("\n")[0]);
+    } finally {
+      setStep("idle");
+    }
+  }
+
+  if (done) {
+    return settlement?.txHash ? (
+      <div className="mt-1 mb-8 inline-flex flex-wrap items-center gap-2 border-2 border-line px-3 py-2 font-mono text-[10px]">
+        <span className="bg-acid px-1.5 py-0.5 font-semibold uppercase tracking-[0.06em] text-ink">x402 paid</span>
+        <span className="text-mut2">settled {settlement.amount} tmUSD (testnet, {settlement.via})</span>
+        <a href={settlement.explorerUrl} target="_blank" rel="noreferrer" className="truncate text-acid underline">
+          {settlement.txHash.slice(0, 16)}…
+        </a>
+      </div>
+    ) : null;
+  }
+
+  const busy = step !== "idle";
+  return (
+    <div className="mt-1 mb-8 border-2 border-line p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="font-mono text-[11px] tracking-[0.08em] text-mut">AI DEEP-DIVE · x402 PREMIUM</div>
+          <p className="m-0 mt-1 max-w-[560px] font-mono text-[10px] leading-[1.6] text-mut2">
+            Above is free. The full natural-language analysis is the paid tier: 0.01 tmUSD on Mantle
+            Sepolia — a <span className="text-mut">testnet</span> token, minted free, gasless (you only sign). Real x402 settlement.
+          </p>
+        </div>
+        <button
+          onClick={run}
+          disabled={busy}
+          className="shrink-0 border-2 border-acid bg-acid px-4 py-2 font-mono text-[11px] font-semibold tracking-[0.04em] text-ink transition-colors hover:bg-ink hover:text-acid disabled:opacity-50"
+        >
+          {busy ? STEP_LABEL[step] : "RUN AI DEEP-DIVE · 0.01 tmUSD →"}
+        </button>
+      </div>
+      {err ? <p className="mt-3 font-mono text-[10px] text-mut">⚠ {err}</p> : null}
     </div>
   );
 }

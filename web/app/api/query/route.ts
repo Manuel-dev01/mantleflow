@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { loadConfig, runQuery } from "@mantleflow/agent";
+import { loadConfig, runQuery, x402Active, buildChallenge, verifyAndSettle, type Settlement } from "@mantleflow/agent";
 
-// Runs server-side only — API keys never reach the browser.
+// Runs server-side only — API keys never reach the browser. Gated by x402 (the deep LLM query is the
+// premium tier); /api/map and the rest stay free. When x402 is disabled the query runs free.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -20,17 +21,33 @@ export async function POST(req: Request) {
   try {
     ({ query } = await req.json());
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return jsonSafe({ error: "Invalid JSON body" }, 400);
   }
   if (typeof query !== "string" || query.trim().length === 0) {
-    return NextResponse.json({ error: "query (string) is required" }, { status: 400 });
+    return jsonSafe({ error: "query (string) is required" }, 400);
   }
+
+  const config = loadConfig(process.env as Record<string, string | undefined>);
+  const resource = `${new URL(req.url).origin}/api/query`;
+
+  // x402 gate (premium tier). No payment → 402 + challenge. Bad/expired payment → 402 + error.
+  let settlement: Settlement | undefined;
+  if (x402Active(config)) {
+    const xPayment = req.headers.get("X-PAYMENT");
+    if (!xPayment) return jsonSafe(buildChallenge(config, resource), 402);
+    try {
+      settlement = await verifyAndSettle(config, xPayment, resource);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return jsonSafe({ error: message, ...buildChallenge(config, resource) }, 402);
+    }
+  }
+
   try {
-    const config = loadConfig(process.env as Record<string, string | undefined>);
     const result = await runQuery(config, query);
-    return jsonSafe(result);
+    return jsonSafe({ ...result, settlement });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return jsonSafe({ error: message }, 500);
   }
 }

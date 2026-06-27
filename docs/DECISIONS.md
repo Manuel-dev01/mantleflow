@@ -164,3 +164,18 @@ sub-score is **insufficient-data** (excluded from composite), never a false 0 �
 bridges we don't probe aren't claimed either way. Per-tx bridge fees are dynamic → "not quoted"
 (never fabricated). The composite now includes cross-chain (weight 0.15) when computed, with a
 self-describing note listing exactly which sub-scores were included.
+
+### D22 — x402: Sepolia tmUSD self-settle, gate /api/query only, pluggable QuestFlow/mainnet
+**Date:** 2026-06-27. **Status:** locked.
+QuestFlow's facilitator is live on Mantle but its API key is gated behind an application form, and
+mainnet USDC = real money + judges holding USDC. So the live x402 demo is **unblocked + judge-
+friendly**: we deployed a minimal **EIP-3009 test stablecoin (tmUSD,
+`0x246e485a5966b19871f3e9297182f8cb49fd8242`)** on Mantle Sepolia with a public faucet, and
+**self-settle** — the server (agent wallet) submits the buyer's signed `transferWithAuthorization`,
+paying gas; a server-funded `/api/faucet` mints tmUSD to the buyer so the buyer needs **zero MNT and
+zero real money** and only signs (gasless). Genuine x402: HTTP 402 + EIP-3009 "exact" scheme + real
+on-chain settlement; only the asset/network differ from mainnet, by config. **Gate `/api/query` (the
+LLM deep-dive) only**; `/api/map`, the workspace, compare, identity, attest stay **free**. QuestFlow
+facilitator + mainnet USDC are **pluggable via env** (`QUESTFLOW_API_KEY`, `X402_NETWORK`). When x402
+is disabled (env unset) the query runs free — `main` stays deployable. The testnet token is clearly
+labelled; every settlement tx is real + explorer-verifiable.
