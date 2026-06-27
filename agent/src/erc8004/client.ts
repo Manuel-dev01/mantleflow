@@ -11,7 +11,7 @@ import { mantleSepoliaTestnet } from "viem/chains";
 import { type AppConfig } from "../config/env.js";
 import { walletClientForSepolia, EXPLORER_SEPOLIA } from "../config/chains.js";
 import { ERC8004 } from "../config/addresses.js";
-import { IDENTITY_ABI, REPUTATION_ABI, PROVENANCE_TAG1 } from "./abis.js";
+import { IDENTITY_ABI, PROVENANCE_TAG1 } from "./abis.js";
 import { type Sourced, type SourceReceipt, sourced } from "../types/source-receipt.js";
 
 const REG = ERC8004.sepolia;
@@ -42,11 +42,6 @@ export interface IdentityView {
   agentUri: string;
 }
 
-export interface ProvenanceSummary {
-  count: number;
-  client: Address;
-}
-
 /** Read-only ERC-8004 view (no key needed) — for the /api/agent route + UI identity panel. */
 export function createErc8004Reader(config: AppConfig) {
   const client = createPublicClient({
@@ -72,26 +67,6 @@ export function createErc8004Reader(config: AppConfig) {
           observedAt: observed(),
           kind: "fact",
           note: `ownerOf/tokenURI(${agentId}) on ${REG.identity}`,
-        },
-      );
-    },
-
-    /** Count of provenance receipts written by `client` about this agent. */
-    async readProvenanceSummary(agentId: string, clientAddr: Address): Promise<Sourced<ProvenanceSummary>> {
-      const res = (await client.readContract({
-        address: REG.reputation,
-        abi: REPUTATION_ABI,
-        functionName: "getSummary",
-        args: [BigInt(agentId), [getAddress(clientAddr)], PROVENANCE_TAG1, ""],
-      })) as readonly [bigint, bigint, number];
-      return sourced(
-        { count: Number(res[0]), client: getAddress(clientAddr) },
-        {
-          sourceName: "ERC-8004 Reputation Registry (Mantle Sepolia eth_call)",
-          url: addrUrl(REG.reputation),
-          observedAt: observed(),
-          kind: "fact",
-          note: `getSummary(${agentId}, [self], tag1="${PROVENANCE_TAG1}") on ${REG.reputation}`,
         },
       );
     },
@@ -179,26 +154,25 @@ export function createErc8004Writer(config: AppConfig) {
     },
 
     /**
-     * Write a provenance receipt: a Reputation feedback entry whose `feedbackHash` commits to the
-     * exact result. value=0 (neutral — this is provenance of work done, NOT a rating), tags carry
-     * the asset, feedbackURI points to the result.
+     * Write a provenance receipt: stamp the result's hash into the agent's OWN identity metadata
+     * (`setMetadata`, key = resultHash). Content-addressed, owner-authorized, tamper-evident — NOT a
+     * reputation score (the Reputation registry forbids self-feedback by design). Anyone can later
+     * `getMetadata(agentId, resultHash)` and confirm the agent committed to exactly this result.
      */
     async writeProvenanceReceipt(input: AttestInput): Promise<AttestResult> {
+      const detail = JSON.stringify({
+        tag: PROVENANCE_TAG1,
+        symbol: input.symbol,
+        uri: input.resultUri,
+        endpoint: input.endpoint,
+        at: observed(),
+      });
       const { request } = await w.public.simulateContract({
         account: w.account,
-        address: REG.reputation,
-        abi: REPUTATION_ABI,
-        functionName: "giveFeedback",
-        args: [
-          BigInt(input.agentId),
-          0n, // neutral value — provenance, not a score
-          0, // valueDecimals
-          PROVENANCE_TAG1,
-          input.symbol,
-          input.endpoint,
-          input.resultUri,
-          input.resultHash,
-        ],
+        address: REG.identity,
+        abi: IDENTITY_ABI,
+        functionName: "setMetadata",
+        args: [BigInt(input.agentId), input.resultHash, stringToHex(detail)],
       });
       const txHash = await w.wallet.writeContract(request);
       await w.public.waitForTransactionReceipt({ hash: txHash });
@@ -207,11 +181,11 @@ export function createErc8004Writer(config: AppConfig) {
         resultHash: input.resultHash,
         agentId: input.agentId,
         receipt: {
-          sourceName: "ERC-8004 Reputation Registry (Mantle Sepolia tx)",
+          sourceName: "ERC-8004 Identity Registry · metadata (Mantle Sepolia tx)",
           url: txUrl(txHash),
           observedAt: observed(),
           kind: "fact",
-          note: `giveFeedback(agentId=${input.agentId}, tag2=${input.symbol}) feedbackHash=result commitment`,
+          note: `setMetadata(agentId=${input.agentId}, key=resultHash) → ${input.symbol} result commitment`,
         },
       };
     },

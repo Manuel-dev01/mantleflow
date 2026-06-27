@@ -19,7 +19,8 @@ export const AppConfigSchema = z.object({
    */
   agentPrivateKey: z
     .string()
-    .regex(/^0x[0-9a-fA-F]{64}$/, "AGENT_PRIVATE_KEY must be a 0x-prefixed 32-byte hex key")
+    .regex(/^(0x)?[0-9a-fA-F]{64}$/, "AGENT_PRIVATE_KEY must be a 32-byte hex key (0x prefix optional)")
+    .transform((k) => (k.startsWith("0x") ? k : `0x${k}`))
     .optional(),
   /** The agent's ERC-8004 token id, set after registration (string to avoid bigint coercion). */
   agentId: z.string().regex(/^\d+$/).optional(),

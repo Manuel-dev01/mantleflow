@@ -64,9 +64,17 @@ Remaining open items are tracked in §6 (non-blocking).
   EIP-8004 spec (primary source). Identity is **ERC-721** (agent = NFT `agentId`): we use
   `register(string agentURI) → uint256 agentId`, `setAgentURI`, plus ERC-721 `tokenURI`/`ownerOf`.
   Reputation: `giveFeedback(uint256 agentId, int128 value, uint8 valueDecimals, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)` and `getSummary(uint256, address[], string, string) → (uint64 count, int128, uint8)`. Sepolia reachable, **`eth_chainId`→5003 confirmed live 2026-06-27**; both Sepolia registries return code (≈130-byte proxies). The Mantle-Sepolia explorer ABI API was unavailable, so per **D6** every write is **simulated on-chain (`simulateContract`) before broadcast** — a successful simulate against the deployed bytecode confirms the selector/args. ABI captured in `agent/src/erc8004/abis.ts`.
-- **Registered agentId** — _pending the live registration run_ (`agent/src/scripts/register-identity.ts`); record agentId + tx hash here once written.
+- **Registered agentId = `309`** — registered live on Mantle Sepolia 2026-06-27. Agent wallet
+  `0x8974881E39a5eF62214929B6CaA6EC0C6e7D47c7`. Register tx
+  `0x107ba4b249c7ec9794f4418c0032b4909d3edad59a0b275e06c9a31d319d5b88`. `register(string agentURI)`
+  confirmed working (ERC-721 mint). `ownerOf(309)` + `tokenURI(309)` read back the wallet + AgentCard URL.
+- **Provenance write CONFIRMED** — `Reputation.giveFeedback` about own agentId **reverts
+  "Self-feedback not allowed"** (the contract forbids self-rating — good). Provenance therefore uses
+  **`Identity.setMetadata(agentId, key=resultHash, value=detail)`**; confirmed live, sample tx
+  `0x021ce501da2e2e35391fc83e99ae5f03b08e352ad5c6c09fece7294dc20ee2a4` emits a `MetadataSet` event
+  (`topic1`=agentId 309, `topic2`=keccak256(resultHash)). See DECISIONS.md D16.
 - **AgentCard (live)** — `https://mantleflow.vercel.app/.well-known/agent-card.json` (served by
-  `web/app/.well-known/agent-card.json/route.ts`); this is the `agentURI` we register.
+  `web/app/.well-known/agent-card.json/route.ts`); this is the `agentURI` we registered.
 
 ## 4. AI Agent Skills (the bonus)
 

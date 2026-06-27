@@ -111,6 +111,7 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error("verify-erc8004 failed:", e);
+  console.error("verify-erc8004 failed:", e instanceof Error ? e.message : String(e));
+  if (e instanceof Error && e.stack) console.error(e.stack.split("\n").slice(0, 4).join("\n"));
   process.exit(1);
 });

@@ -47,6 +47,30 @@ export const IDENTITY_ABI = [
     inputs: [{ name: "owner", type: "address" }],
     outputs: [{ type: "uint256" }],
   },
+  // Provenance: the agent stamps a result's hash into its OWN identity metadata (owner-authorized,
+  // content-addressed by key = resultHash). Used instead of self-feedback, which the Reputation
+  // registry forbids ("Self-feedback not allowed") — reputation is for third parties only.
+  {
+    type: "function",
+    name: "setMetadata",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "metadataKey", type: "string" },
+      { name: "metadataValue", type: "bytes" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "getMetadata",
+    stateMutability: "view",
+    inputs: [
+      { name: "agentId", type: "uint256" },
+      { name: "metadataKey", type: "string" },
+    ],
+    outputs: [{ type: "bytes" }],
+  },
 ] as const;
 
 export const REPUTATION_ABI = [

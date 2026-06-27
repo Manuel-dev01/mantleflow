@@ -25,8 +25,9 @@ assumption}. No number ships without one — accuracy is a judged axis.
 
 ## On-chain provenance (ERC-8004)
 
-MantleFlow registers an **ERC-8004 identity** (ERC-721 agentId) on Mantle Sepolia and can write a
-**provenance receipt** to the Reputation registry for any result: `giveFeedback(...)` with
-`feedbackHash = keccak256(canonicalJSON(map))`, neutral `value` (0 — this is provenance, **not** a
-self-score), `tag1 = "distribution-analysis"`, `tag2 = symbol`, `feedbackURI` → the re-derivable
-result. Anyone can recompute the map, hash it, and check it matches the on-chain commitment.
+MantleFlow registers an **ERC-8004 identity** (ERC-721 agentId **#309** on Mantle Sepolia) and can
+write a **provenance receipt** for any result by stamping it into its OWN identity metadata:
+`Identity.setMetadata(agentId, key = keccak256(canonicalJSON(map)), value = {symbol, uri, at})`.
+Content-addressed, owner-authorized, tamper-evident — **not** a self-score. (The Reputation registry
+deliberately forbids self-feedback, so reputation is reserved for genuine third parties.) Anyone can
+recompute the map, hash it, and find the matching `MetadataSet` event on Sepolia.

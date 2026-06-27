@@ -110,15 +110,18 @@ TVL-proxy venues (v3 / Liquidity Book) report `null` → the UI shows "—" rath
 number. Surfaced as the Overview "BEST SLIP / $250k" stat (min across CPMM venues) and the Liquidity
 table's SLIP/250K column. No change to composite weighting.
 
-### D16 — Provenance receipts, not self-scores (ERC-8004 reputation usage)
+### D16 — Provenance via identity metadata, not self-reputation (confirmed on-chain)
 **Date:** 2026-06-27. **Status:** locked.
-An agent auto-writing its own reputation score would read as faked. Instead, each completed analysis
-can write a Reputation `giveFeedback` entry whose **`feedbackHash = keccak256(canonicalJSON(map))`**
-commits to the exact result, with **`value = 0` (neutral — provenance, not a rating)**,
-`tag1="distribution-analysis"`, `tag2=symbol`, `feedbackURI` → the re-derivable result. It is a
-tamper-evident on-chain record of work done; anyone can recompute the map, hash it, and check the
-commitment. The UI frames it as provenance, never a score. **User-triggered** ("Attest result
-on-chain"), not automatic. (`agent/src/erc8004/client.ts`, `web/app/api/attest`.)
+An agent auto-writing its own reputation would read as faked — and the deployed Mantle-Sepolia
+Reputation registry **enforces this**: `giveFeedback` about your own agentId **reverts with
+"Self-feedback not allowed"** (confirmed live via `simulateContract`, so no gas wasted). Good design.
+So provenance uses the **Identity registry's `setMetadata`** instead: each completed analysis stamps
+**`keccak256(canonicalJSON(map))`** as the metadata KEY into the agent's OWN identity (owner-
+authorized), with the value = `{symbol, uri, endpoint, at}`. It's a tamper-evident, content-addressed
+record of work done — anyone can recompute the map, hash it, and find the matching `MetadataSet`
+event (`agentId` + `keccak(key)` indexed). NOT a score. **User-triggered** ("Attest result on-chain").
+Reputation stays reserved for genuine third-party feedback. (`agent/src/erc8004/client.ts`,
+`web/app/api/attest`.)
 
 ### D17 — MCP transport = stdio; packaged as an Anthropic SKILL.md skill
 **Date:** 2026-06-27. **Status:** locked.

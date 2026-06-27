@@ -26,7 +26,6 @@ export {
   type Erc8004Reader,
   type Erc8004Writer,
   type IdentityView,
-  type ProvenanceSummary,
   type RegisterResult,
   type AttestResult,
   type AttestInput,

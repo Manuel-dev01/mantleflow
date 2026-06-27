@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { loadConfig, createErc8004Reader, accountFromKey, ERC8004 } from "@mantleflow/agent";
+import { loadConfig, createErc8004Reader, ERC8004 } from "@mantleflow/agent";
 
 // Reads the agent's ERC-8004 identity + provenance-receipt count from Mantle Sepolia. No key needed
 // for the reads; honest "registered: false" when AGENT_ID isn't set yet.
@@ -31,14 +31,7 @@ export async function GET() {
     }
     const reader = createErc8004Reader(cfg);
     const identity = await reader.readIdentity(cfg.agentId);
-
-    // Provenance receipts are written by the agent wallet; read its summary if the key is configured.
-    let provenance = null;
-    if (cfg.agentPrivateKey) {
-      const client = accountFromKey(cfg.agentPrivateKey).address;
-      provenance = await reader.readProvenanceSummary(cfg.agentId, client);
-    }
-    return jsonSafe({ registered: true, registry, identity, provenance });
+    return jsonSafe({ registered: true, registry, identity });
   } catch (err) {
     return jsonSafe({ error: err instanceof Error ? err.message : String(err) }, 500);
   }
