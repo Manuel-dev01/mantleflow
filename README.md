@@ -32,12 +32,25 @@ A finding of *"no secondary market"* or *"holder is gated"* is a headline result
 /docs       VERIFIED.md (fact ledger), DECISIONS.md, RESEARCH.md (writeup)
 ```
 
-## Status
-**Phase 1 complete & deployed** (the MI4 vertical slice, live on Vercel). The agent reads live
-Mantle data via a DeepSeek tool-use loop and returns the headline thesis result for MI4: **no
-on-chain secondary venue** + a **Securitize DS-Token transfer-agent gate**, every datum
-source-receipted. Phase 0 verification gate is locked in `docs/VERIFIED.md` / `docs/DECISIONS.md`.
-Next: Phase 2 breadth (mETH/cmETH, fBTC, USDe, USDY, syrupUSDT) + depth/fragmentation/borrowability.
+## Status — all four Mantle agent primitives live, reading real data
+- **Distribution Score engine** over 6 assets (MI4, mETH, cmETH, fBTC, USDe, USDY): reachability,
+  liquidity depth (±2% exact for CPMM, labelled TVL proxy elsewhere), HHI fragmentation,
+  borrowability (Lendle, on-chain), cross-chain (LayerZero OFT + CCIP), compliance gating — every
+  datum source-receipted, the composite labelled with exactly which sub-scores it includes.
+- **AI Agent Skill** (the bonus) — `skill/mantleflow-distribution/` (open `SKILL.md` format) wrapping
+  the **MCP server** (`/mcp`, stdio).
+- **ERC-8004 identity live on Mantle Sepolia** — agentId **309**; per-analysis provenance via
+  `Identity.setMetadata` (content-addressed `keccak256` receipts, tx-receipt-verifiable); genuine
+  third-party reputation (visitors rate from their own wallet — self-rating is forbidden on-chain).
+- **x402 pay-per-query live** — real HTTP 402 + EIP-3009 `transferWithAuthorization`, self-settled
+  on-chain (testnet tmUSD, gasless buyer via server faucet); gates `/api/query` only, all browsing
+  free; QuestFlow facilitator + mainnet USDC pluggable via env.
+
+Headline findings (live): **MI4** is gated (Securitize DS-Token allowlist) with **no on-chain
+secondary venue** — issued but undistributed; **mETH** is freely transferable, Lendle collateral at
+82.5% LTV; **RWAs bridge by LayerZero OFT or not at all** (none are on Mantle's CCIP token set);
+**syrupUSDT left Mantle** — distribution can regress. Full writeup: [`docs/RESEARCH.md`](docs/RESEARCH.md).
+Fact ledger: [`docs/VERIFIED.md`](docs/VERIFIED.md) · decisions: [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Accuracy discipline
 Every displayed number is traceable to a primary source with a timestamp. See `docs/VERIFIED.md`.
