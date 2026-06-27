@@ -11,16 +11,55 @@ import { mantleSepoliaTestnet } from "viem/chains";
 import { type AppConfig } from "../config/env.js";
 import { walletClientForSepolia, EXPLORER_SEPOLIA } from "../config/chains.js";
 import { ERC8004 } from "../config/addresses.js";
-import { IDENTITY_ABI, PROVENANCE_TAG1 } from "./abis.js";
+import { IDENTITY_ABI, REPUTATION_ABI, PROVENANCE_TAG1 } from "./abis.js";
 import { type Sourced, type SourceReceipt, sourced } from "../types/source-receipt.js";
 
 const REG = ERC8004.sepolia;
+
+// Deployed Identity registry's MetadataSet event signature (topic0) — captured live from the
+// register/attest tx logs on Mantle Sepolia (2026-06-27). Topics: [sig, indexed agentId,
+// indexed keccak256(metadataKey)]. See docs/VERIFIED.md §3.
+const METADATA_SET_TOPIC = "0x2c149ed548c6d2993cd73efe187df6eccabe4538091b33adbd25fafdb8a1468b";
+
+// Deployed Reputation registry's feedback event signature (topic0) — captured live 2026-06-27.
+// Topics: [sig, indexed agentId, indexed client(rater), indexed tagHash]. See docs/VERIFIED.md §3.
+const FEEDBACK_TOPIC = "0x6a4a61743519c9d648a14e6493f47dbe3ff1aa29e7785c96c8326a205e58febc";
+
+// Mantle Sepolia RPC caps eth_getLogs at ~10k blocks; chunk under that.
+const LOG_CHUNK = 9000n;
+const LOG_CHUNKS = 6; // ~54k blocks ≈ 30h — covers the active campaign window (documented bound).
 
 function txUrl(hash: Hex): string {
   return `${EXPLORER_SEPOLIA}/tx/${hash}`;
 }
 function addrUrl(addr: string): string {
   return `${EXPLORER_SEPOLIA}/address/${addr}`;
+}
+
+/** agentId → its 32-byte indexed-topic encoding. */
+function agentTopic(agentId: string): string {
+  return `0x${BigInt(agentId).toString(16).padStart(64, "0")}`;
+}
+
+/** A log shape — only the fields we inspect (works for viem receipt logs and raw RPC logs). */
+export interface LogLike {
+  address?: string | null;
+  topics?: readonly (string | null)[];
+}
+
+/**
+ * Pure check: does this log prove agent `agentId` committed to `resultHash`? True iff it is a
+ * MetadataSet event from the Identity registry with topic1 = agentId and topic2 = keccak256(key).
+ * This is the reliable, RPC-range-independent provenance verification (decoded from a tx receipt).
+ */
+export function metadataLogMatches(log: LogLike, agentId: string, resultHash: Hex): boolean {
+  const t = log.topics ?? [];
+  return (
+    (log.address ?? "").toLowerCase() === REG.identity.toLowerCase() &&
+    (t[0] ?? "").toLowerCase() === METADATA_SET_TOPIC &&
+    (t[1] ?? "").toLowerCase() === agentTopic(agentId).toLowerCase() &&
+    (t[2] ?? "").toLowerCase() === keccak256(stringToHex(resultHash)).toLowerCase()
+  );
 }
 
 /** Deterministic JSON (recursively sorted keys) so the same result always hashes identically. */
@@ -40,6 +79,22 @@ export interface IdentityView {
   agentId: string;
   owner: Address;
   agentUri: string;
+}
+
+export interface ReputationView {
+  /** Number of third-party feedback entries found in the scanned window. */
+  count: number;
+  /** Distinct rater (client) addresses. */
+  raters: Address[];
+  /** Aggregate score from getSummary over those raters, normalised by valueDecimals (null if none). */
+  avgScore: number | null;
+  /** Whether the scan window may have missed older entries (RPC range bound). */
+  windowBounded: boolean;
+}
+
+/** topic2 (32-byte) → checksummed address (last 20 bytes). */
+function topicToAddress(topic: string): Address {
+  return getAddress(`0x${topic.slice(-40)}`);
 }
 
 /** Read-only ERC-8004 view (no key needed) — for the /api/agent route + UI identity panel. */
@@ -70,6 +125,94 @@ export function createErc8004Reader(config: AppConfig) {
         },
       );
     },
+
+    /**
+     * Independently verify a provenance attestation: re-fetch the tx receipt and confirm it contains
+     * a MetadataSet event committing `resultHash` for `agentId`. Reliable + unbounded (one receipt
+     * read) — anyone with the tx hash can run this.
+     */
+    async verifyAttestation(
+      txHash: Hex,
+      agentId: string,
+      resultHash: Hex,
+    ): Promise<Sourced<{ verified: boolean; blockNumber: string | null; txHash: Hex }>> {
+      let verified = false;
+      let blockNumber: string | null = null;
+      try {
+        const receipt = await client.getTransactionReceipt({ hash: txHash });
+        blockNumber = receipt.blockNumber.toString();
+        verified = receipt.logs.some((l) => metadataLogMatches(l, agentId, resultHash));
+      } catch {
+        /* unknown tx / RPC issue → not verified */
+      }
+      return sourced(
+        { verified, blockNumber, txHash },
+        {
+          sourceName: "ERC-8004 Identity Registry · MetadataSet receipt (Mantle Sepolia)",
+          url: txUrl(txHash),
+          observedAt: observed(),
+          kind: "fact",
+          note: `getTransactionReceipt(${txHash}); match agentId=${agentId} + keccak256(resultHash)`,
+        },
+      );
+    },
+
+    /**
+     * Read GENUINE third-party reputation: scan recent Feedback events for this agent (chunked under
+     * the RPC's 10k-block log cap), collect distinct raters, then `getSummary` over them for the
+     * aggregate score. Self-feedback is impossible (the contract forbids it), so any count here is
+     * from independent addresses.
+     */
+    async readReputation(agentId: string): Promise<Sourced<ReputationView>> {
+      const at = agentTopic(agentId);
+      const raters = new Set<string>();
+      let latest = 0n;
+      try {
+        latest = await client.getBlockNumber();
+        for (let i = 0; i < LOG_CHUNKS; i++) {
+          const to = latest - BigInt(i) * LOG_CHUNK;
+          if (to < 0n) break;
+          const from = to > LOG_CHUNK ? to - LOG_CHUNK + 1n : 0n;
+          const logs = (await client.request({
+            method: "eth_getLogs",
+            params: [{ address: REG.reputation, fromBlock: `0x${from.toString(16)}`, toBlock: `0x${to.toString(16)}`, topics: [FEEDBACK_TOPIC, at] }],
+          } as never)) as Array<{ topics: string[] }>;
+          for (const l of logs) if (l.topics[2]) raters.add(topicToAddress(l.topics[2]));
+          if (from === 0n) break;
+        }
+      } catch {
+        /* scan failed — report what we have */
+      }
+
+      const raterList = [...raters].map((r) => r as Address);
+      let count = raterList.length;
+      let avgScore: number | null = null;
+      if (raterList.length > 0) {
+        try {
+          const sum = (await client.readContract({
+            address: REG.reputation,
+            abi: REPUTATION_ABI,
+            functionName: "getSummary",
+            args: [BigInt(agentId), raterList, "", ""],
+          })) as readonly [bigint, bigint, number];
+          count = Number(sum[0]);
+          avgScore = Number(sum[1]) / 10 ** Number(sum[2] || 0);
+        } catch {
+          /* keep the log-derived count */
+        }
+      }
+
+      return sourced(
+        { count, raters: raterList, avgScore, windowBounded: true },
+        {
+          sourceName: "ERC-8004 Reputation Registry · Feedback events + getSummary (Mantle Sepolia)",
+          url: addrUrl(REG.reputation),
+          observedAt: observed(),
+          kind: "fact",
+          note: `Feedback logs (last ~${LOG_CHUNKS * Number(LOG_CHUNK)} blocks) + getSummary for agentId ${agentId}`,
+        },
+      );
+    },
   };
 }
 
@@ -93,6 +236,9 @@ export interface AttestResult {
   txHash: Hex;
   resultHash: Hex;
   agentId: string;
+  blockNumber: string | null;
+  /** Independently confirmed from the tx receipt's MetadataSet event (not just tx success). */
+  verified: boolean;
   receipt: SourceReceipt;
 }
 
@@ -175,11 +321,15 @@ export function createErc8004Writer(config: AppConfig) {
         args: [BigInt(input.agentId), input.resultHash, stringToHex(detail)],
       });
       const txHash = await w.wallet.writeContract(request);
-      await w.public.waitForTransactionReceipt({ hash: txHash });
+      const receipt = await w.public.waitForTransactionReceipt({ hash: txHash });
+      // Confirm the commitment landed in the canonical event, not merely that the tx succeeded.
+      const verified = receipt.logs.some((l) => metadataLogMatches(l, input.agentId, input.resultHash));
       return {
         txHash,
         resultHash: input.resultHash,
         agentId: input.agentId,
+        blockNumber: receipt.blockNumber.toString(),
+        verified,
         receipt: {
           sourceName: "ERC-8004 Identity Registry · metadata (Mantle Sepolia tx)",
           url: txUrl(txHash),

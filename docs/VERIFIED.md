@@ -75,6 +75,16 @@ Remaining open items are tracked in §6 (non-blocking).
   (`topic1`=agentId 309, `topic2`=keccak256(resultHash)). See DECISIONS.md D16.
 - **AgentCard (live)** — `https://mantleflow.vercel.app/.well-known/agent-card.json` (served by
   `web/app/.well-known/agent-card.json/route.ts`); this is the `agentURI` we registered.
+- **Deployed event topics (captured live 2026-06-27)** — Identity `MetadataSet` topic0
+  `0x2c149ed548c6d2993cd73efe187df6eccabe4538091b33adbd25fafdb8a1468b` (topics: agentId, keccak(key));
+  Reputation `Feedback` topic0 `0x6a4a61743519c9d648a14e6493f47dbe3ff1aa29e7785c96c8326a205e58febc`
+  (topics: agentId, client, tagHash). Used for receipt-decode provenance verify + reputation reads.
+- **Self-feedback forbidden** — `Reputation.giveFeedback` about one's own agentId reverts
+  "Self-feedback not allowed". Genuine **third-party reputation exists**: agent 309 has a real rating
+  from independent wallet `0xf45149a47658709967D7482724C90c909DD1b751` (avg 5), tx
+  `0x40ec59da35e7b01f774fd1828b899c3d7a7250fc9e903cd726567003358a6dc3`.
+- **RPC log cap** — Mantle Sepolia `eth_getLogs` caps at ~10k blocks (9000 ok, 45000 rejected);
+  reputation reads chunk under this; provenance verify uses the tx receipt (unbounded).
 
 ## 4. AI Agent Skills (the bonus)
 
@@ -137,16 +147,32 @@ Remaining open items are tracked in §6 (non-blocking).
 - **Lendle** (Aave-v2 fork, borrowability source, getCode-verified): ProtocolDataProvider `0x552b9e4bae485C4B7F540777d7D25614CdB84773`, LendingPool `0xCFa5aE7c2CE8Fadc6426C1ff872cA45378Fb7cF3`, AddressesProvider `0xAb94Bedd21ae3411eB2698945dfCab1D5C19C3d4`. `getReserveConfigurationData`/`getReserveData` return decoded LTV/rates/utilization. (Live read 2026-06-26: mETH = collateral, LTV 82.5%, liq.thr 86%, util ~21%.)
 - **DefiLlama coins** `https://coins.llama.fi/prices/current/mantle:0x<addr>` (keyless) — USD pricing for depth/borrow.
 - **Depth methodology:** Uniswap-v2 pairs (Merchant Moe classic) → exact ±2%-of-mid USD via constant-product `getReserves`; DefiLlama pool TVL as a labelled liquidity proxy for v3 / Liquidity-Book venues (no precise ±2% claimed). Fragmentation = HHI over per-venue USD liquidity.
-- **Composite:** weighted partial (reachability .25, depth .2, fragmentation .15, borrowability .2, compliance .2), renormalised over computed sub-scores, **excludes cross-chain (Phase 4)** — labelled as such.
+- **Composite:** weighted (reachability .25, depth .2, fragmentation .15, borrowability .2, compliance .2, cross-chain .15), renormalised over **computed** sub-scores, with a self-describing note listing which were included/excluded.
 
 ---
+
+## 9. Cross-chain reach (confirmed 2026-06-27)
+
+- **LayerZero V2 endpoint on Mantle** = `0x1a44076050125825900e736c501f859c50fE728c` — confirmed via
+  on-chain `endpoint()` on **cmETH** and **USDe** (both are LayerZero OFTs). mETH / fBTC / MI4 / USDY
+  do **not** expose this endpoint (not OFT on the token contract). Detection = `endpoint()` ==
+  this address.
+- **Chainlink CCIP on Mantle** — Mantle is a CCIP chain (Router/TokenAdminRegistry per the CCIP
+  directory). Its CCIP **token set carries LINK / USDC / USDT / wstETH / W0G** — **none of our tracked
+  RWAs** (checked via the CCIP REST API `docs.chain.link/api/ccip/v1/tokens?environment=mainnet&chainId=5000`,
+  2026-06-27). A real distribution finding: RWAs travel via LayerZero or not at all, not CCIP.
+- **Cost** is per-tx dynamic for both CCIP and LayerZero → reported "not quoted" (never fabricated).
 
 ## §6. Open items to close (non-blocking for architecture lock)
 
 1. **Research Challenge rubric/submission page** — not web-indexed. Resolve the t.co from the
    2026-06-16 post / check group.mantle.xyz; confirm tracks (incl. "Track 2 — The Research Agent"),
    judging axes, submission mechanics, and the AI Agent Skills bonus wording before Phase 6 submit.
-2. **QuestFlow `/verify`·`/settle` exact schemas** — confirm against the live facilitator (Phase 4).
+2. **x402 / QuestFlow** — facilitator **confirmed LIVE on Mantle** (`https://facilitator.questflow.ai`,
+   Bearer `FACILITATOR_API_KEY`, USDC/EIP-3009; "Mantle on x402" announced). Still to confirm before
+   building: exact `/verify`·/`settle` JSON schemas + Mantle USDC `payTo`/amount semantics (needs the
+   API key). Plan = gate a premium tier; basic queries stay free; fallback = own minimal Sepolia
+   facilitator. (Phase 4 build — planned, not yet implemented.)
 3. **Agent Scaffold repo / Mantle skill registration path** — locate before Phase 3; fallback is
    plain SKILL.md + MCP.
 4. **MI4 implementation contract** — resolve the proxy's implementation slot and inspect its ABI/

@@ -8,9 +8,11 @@ import {
 import type { ReachabilityResult } from "../dex/reachability.js";
 import type { LiquidityResult } from "../dex/depth.js";
 import type { LendleReserve } from "../adapters/lendle.js";
+import type { CrossChainReach } from "../adapters/crosschain.js";
 import { depthSubScore } from "./subscores/depth.js";
 import { fragmentationSubScore } from "./subscores/fragmentation.js";
 import { borrowabilitySubScore } from "./subscores/borrowability.js";
+import { crossChainSubScore } from "./subscores/crosschain.js";
 
 function reachabilitySubScore(r: ReachabilityResult): SubScore {
   const inputs: Sourced<unknown>[] = r.venues.map((v) => ({ value: v, receipt: v.receipt }));
@@ -51,25 +53,26 @@ function complianceSubScore(g: Sourced<ComplianceGate>): SubScore {
   };
 }
 
-/** Cross-chain reach is wired in Phase 4 — kept honest as not-yet-computed. */
+/** Honest fallback when the cross-chain read couldn't run (kept out of the composite). */
 function crossChainStub(): SubScore {
   return {
     id: "cross-chain",
     label: "Cross-chain reach",
-    status: "not-yet-computed",
+    status: "insufficient-data",
     value: null,
-    explanation: "Not yet computed (Phase 4: CCIP/bridge route + cost). Shown to avoid implying a value we have not sourced.",
+    explanation: "Cross-chain reach could not be sourced this run (transient). Not scored — we never imply a value we have not sourced.",
     inputs: [],
   };
 }
 
-/** Composite weights over the sub-scores that can be computed. Cross-chain excluded until Phase 4. */
+/** Composite weights over the sub-scores that can be computed (renormalised over those present). */
 const WEIGHTS: Partial<Record<SubScoreId, number>> = {
   reachability: 0.25,
   "liquidity-depth": 0.2,
   fragmentation: 0.15,
   borrowability: 0.2,
   compliance: 0.2,
+  "cross-chain": 0.15,
 };
 
 interface Composite {
@@ -92,10 +95,15 @@ function composite(subScores: SubScore[]): Composite {
     }
   }
   if (weightSum === 0) return { value: null, included, note: "no sub-scores computed" };
+  const all: SubScoreId[] = ["reachability", "liquidity-depth", "fragmentation", "borrowability", "compliance", "cross-chain"];
+  const excluded = all.filter((id) => !included.includes(id));
   return {
     value: Math.round(weighted / weightSum),
     included,
-    note: "partial — excludes cross-chain (Phase 4)" + (included.length < 5 ? " and not-applicable sub-scores" : ""),
+    note:
+      excluded.length === 0
+        ? `weighted mean over all ${included.length} sub-scores`
+        : `partial — weighted mean over ${included.length} computed sub-scores; not scored: ${excluded.join(", ")}`,
   };
 }
 
@@ -105,6 +113,8 @@ export interface AssembleInput {
   liquidity: LiquidityResult;
   borrow: Sourced<LendleReserve>;
   compliance: Sourced<ComplianceGate>;
+  /** Optional — when absent (or the read failed), cross-chain is reported insufficient-data. */
+  crossChain?: CrossChainReach | undefined;
   generatedAt: string;
 }
 
@@ -120,7 +130,7 @@ export function assembleDistributionMap(input: AssembleInput): DistributionMap {
     fragmentationSubScore(input.liquidity),
     borrowabilitySubScore(input.borrow),
     complianceSubScore(input.compliance),
-    crossChainStub(),
+    input.crossChain ? crossChainSubScore(input.crossChain) : crossChainStub(),
   ];
 
   const comp = composite(subScores);

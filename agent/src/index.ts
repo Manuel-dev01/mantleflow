@@ -16,6 +16,12 @@ export { detectGatesFromFunctions, checkComplianceGate } from "./modules/complia
 export { findSecondaryVenues, type ReachabilityResult } from "./dex/reachability.js";
 export { analyzeLiquidity, type VenueLiquidity, type LiquidityResult } from "./dex/depth.js";
 export { cpmmSlippagePct, STANDARD_CLEAR_SIZE_USD } from "./dex/slippage.js";
+export {
+  findCrossChainRoutes,
+  type CrossChainReach,
+  type CrossChainRoute,
+  type CrossChainProtocol,
+} from "./adapters/crosschain.js";
 export { type LendleReserve } from "./adapters/lendle.js";
 export { createCapabilities, type Capabilities } from "./capabilities.js";
 export { runQuery, type QueryResult } from "./orchestrator/orchestrator.js";
@@ -23,9 +29,12 @@ export {
   createErc8004Reader,
   createErc8004Writer,
   hashResult,
+  metadataLogMatches,
+  type LogLike,
   type Erc8004Reader,
   type Erc8004Writer,
   type IdentityView,
+  type ReputationView,
   type RegisterResult,
   type AttestResult,
   type AttestInput,

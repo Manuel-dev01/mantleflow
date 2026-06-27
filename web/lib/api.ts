@@ -36,7 +36,10 @@ export interface AgentInfo {
     agentCardUrl: string;
   };
   identity?: { value: { agentId: string; owner: string; agentUri: string }; receipt: SourceReceipt };
-  provenance?: { value: { count: number; client: string }; receipt: SourceReceipt } | null;
+  reputation?: {
+    value: { count: number; raters: string[]; avgScore: number | null; windowBounded: boolean };
+    receipt: SourceReceipt;
+  } | null;
   error?: string;
 }
 
@@ -49,9 +52,25 @@ export interface AttestResponse {
   txHash?: string;
   resultHash?: string;
   agentId?: string;
+  blockNumber?: string | null;
+  verified?: boolean;
   explorerUrl?: string;
   receipt?: SourceReceipt;
   error?: string;
+}
+
+export interface VerifyResponse {
+  value?: { verified: boolean; blockNumber: string | null; txHash: string };
+  receipt?: SourceReceipt;
+  error?: string;
+}
+
+/** Independently re-verify an attestation on-chain (re-reads the tx receipt). */
+export async function verifyAttestation(tx: string, hash: string): Promise<VerifyResponse> {
+  const res = await fetch(`/api/verify?tx=${encodeURIComponent(tx)}&hash=${encodeURIComponent(hash)}`, {
+    cache: "no-store",
+  });
+  return (await res.json()) as VerifyResponse;
 }
 
 /** Write an on-chain provenance receipt for a result. `ok=false` (e.g. 501) → honestly unconfigured. */

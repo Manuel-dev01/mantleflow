@@ -15,6 +15,7 @@ import type {
   SourceReceipt,
   SecondaryVenue,
   VenueLiquidity,
+  CrossChainRoute,
 } from "@mantleflow/agent";
 
 export function subOf(map: DistributionMap, id: SubScoreId): SubScore | undefined {
@@ -29,6 +30,22 @@ export function venuesOf(map: DistributionMap): SecondaryVenue[] {
 /** Per-venue liquidity from the liquidity-depth sub-score. */
 export function liquidityOf(map: DistributionMap): VenueLiquidity[] {
   return (subOf(map, "liquidity-depth")?.inputs ?? []).map((i) => i.value as VenueLiquidity);
+}
+
+/** Cross-chain routes (incl. negative/checked results) from the cross-chain sub-score. */
+export function routesOf(map: DistributionMap): {
+  routes: CrossChainRoute[];
+  status: SubScoreStatus;
+  value: number | null;
+  explanation: string;
+} {
+  const s = subOf(map, "cross-chain");
+  return {
+    routes: (s?.inputs ?? []).map((i) => i.value as CrossChainRoute),
+    status: s?.status ?? "not-yet-computed",
+    value: s?.value ?? null,
+    explanation: s?.explanation ?? "",
+  };
 }
 
 export interface BorrowSummary {

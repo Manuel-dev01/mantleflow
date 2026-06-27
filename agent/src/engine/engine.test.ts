@@ -53,7 +53,8 @@ describe("assembleDistributionMap", () => {
     // depth + fragmentation are not-applicable (no venues); reachability/borrow=0, compliance=15
     expect(map.subScores.find((s) => s.id === "liquidity-depth")!.status).toBe("not-applicable");
     expect(map.subScores.find((s) => s.id === "borrowability")!.value).toBe(0);
-    expect(map.subScores.find((s) => s.id === "cross-chain")!.status).toBe("not-yet-computed");
+    // no crossChain input provided → honest insufficient-data (excluded from composite)
+    expect(map.subScores.find((s) => s.id === "cross-chain")!.status).toBe("insufficient-data");
 
     // partial composite over the 3 computed sub-scores (reachability 0, borrow 0, compliance 15)
     expect(map.composite).not.toBeNull();

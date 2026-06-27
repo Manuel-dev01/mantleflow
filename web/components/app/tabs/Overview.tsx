@@ -117,6 +117,11 @@ function AttestBlock({ map }: { map: DistributionMap }) {
 
       {res?.txHash ? (
         <div className="mt-3 border-t-2 border-line pt-3 font-mono text-[11px]">
+          {res.verified ? (
+            <div className="mb-2 inline-block bg-acid px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-ink">
+              ✓ Independently verified on-chain{res.blockNumber ? ` · block ${res.blockNumber}` : ""}
+            </div>
+          ) : null}
           <div className="flex justify-between gap-3">
             <span className="text-mut2">tx</span>
             <a href={res.explorerUrl} target="_blank" rel="noreferrer" className="truncate text-acid underline">
@@ -127,6 +132,13 @@ function AttestBlock({ map }: { map: DistributionMap }) {
             <span className="text-mut2">result hash</span>
             <span className="truncate text-paper">{res.resultHash}</span>
           </div>
+          <p className="mt-2 text-[10px] leading-[1.6] text-mut2">
+            Verified by decoding the tx receipt’s MetadataSet event (agentId + keccak256 of this exact
+            result) — re-checkable at{" "}
+            <code className="text-mut">
+              /api/verify?tx={res.txHash?.slice(0, 10)}…&amp;hash={res.resultHash?.slice(0, 10)}…
+            </code>
+          </p>
         </div>
       ) : null}
 

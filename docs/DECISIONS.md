@@ -137,3 +137,30 @@ write selectors are confirmed via on-chain `simulateContract` before broadcast (
 explorer ABI API was unavailable; the ABI itself is the EIP-8004 spec (primary source). The signing
 key (`AGENT_PRIVATE_KEY`) is **testnet-only**, lives only in gitignored env + Vercel (encrypted), and
 the whole app degrades gracefully (identity "pending", attest 501) when it is absent.
+
+### D19 — Provenance verify by tx-receipt decode (reliable, tx-hash-bound)
+**Date:** 2026-06-27. **Status:** locked.
+The dropped read-back failed because the RPC caps `eth_getLogs` at ~10k blocks and `getMetadata`
+returns empty on this deployment. Reliable verification = decode the attest **tx receipt**
+(`getTransactionReceipt`, unbounded): confirm a `MetadataSet` log from the Identity registry with
+`topic1 = agentId` and `topic2 = keccak256(resultHash)` (`metadataLogMatches`). Surfaced as
+`verified` on `/api/attest` and a standalone `GET /api/verify?tx=&hash=` ("anyone can check"). Honest
+bound: verification needs the tx hash (shown in the UI); we don't scan full history.
+
+### D20 — Third-party reputation via the visitor's own browser wallet (no self-rating)
+**Date:** 2026-06-27. **Status:** locked.
+The Reputation registry forbids self-feedback, so reputation must come from a different address. A
+visitor connects their OWN Sepolia wallet (`web/lib/wallet.ts`, minimal `window.ethereum` + viem —
+no wagmi) and signs `giveFeedback(agentId,…)` themselves (`RateAgent`). Reads are genuine: scan
+recent `Feedback` events (chunked under the 10k-block cap) → distinct raters → `getSummary` for the
+aggregate. Self-rating is impossible, so any displayed count is real third-party reputation.
+
+### D21 — Cross-chain reach: verified channels only (CCIP + LayerZero OFT), cost not quoted
+**Date:** 2026-06-27. **Status:** locked.
+Cross-chain is now **computed** from two sourced signals: LayerZero OFT (on-chain `endpoint()` ==
+LZ V2 endpoint — detects cmETH, USDe) and Chainlink CCIP membership (Mantle's CCIP token set is
+LINK/USDC/USDT/wstETH/W0G — no RWAs). We score only verified routes; when none are verified the
+sub-score is **insufficient-data** (excluded from composite), never a false 0 — issuer-specific
+bridges we don't probe aren't claimed either way. Per-tx bridge fees are dynamic → "not quoted"
+(never fabricated). The composite now includes cross-chain (weight 0.15) when computed, with a
+self-describing note listing exactly which sub-scores were included.

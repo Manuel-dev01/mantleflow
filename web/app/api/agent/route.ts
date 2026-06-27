@@ -30,8 +30,11 @@ export async function GET() {
       return jsonSafe({ registered: false, registry });
     }
     const reader = createErc8004Reader(cfg);
-    const identity = await reader.readIdentity(cfg.agentId);
-    return jsonSafe({ registered: true, registry, identity });
+    const [identity, reputation] = await Promise.all([
+      reader.readIdentity(cfg.agentId),
+      reader.readReputation(cfg.agentId).catch(() => null),
+    ]);
+    return jsonSafe({ registered: true, registry, identity, reputation });
   } catch (err) {
     return jsonSafe({ error: err instanceof Error ? err.message : String(err) }, 500);
   }

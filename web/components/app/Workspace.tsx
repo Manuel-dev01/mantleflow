@@ -103,7 +103,7 @@ export function Workspace({
           ) : tab === "liquidity" ? (
             <LiquidityTab map={map} />
           ) : tab === "routes" ? (
-            <RoutesTab />
+            <RoutesTab map={map} />
           ) : (
             <GatesTab map={map} />
           )}

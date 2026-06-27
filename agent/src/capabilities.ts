@@ -10,6 +10,7 @@ import { analyzeLiquidity } from "./dex/depth.js";
 import { checkComplianceGate } from "./modules/compliance.js";
 import { createPriceAdapter } from "./adapters/prices.js";
 import { createLendleAdapter, type LendleReserve } from "./adapters/lendle.js";
+import { findCrossChainRoutes } from "./adapters/crosschain.js";
 import { assembleDistributionMap } from "./engine/engine.js";
 import { type ComplianceGate, type DistributionMap } from "./engine/types.js";
 import { type Sourced } from "./types/source-receipt.js";
@@ -90,7 +91,7 @@ export function createCapabilities(config: AppConfig): Capabilities {
       const addr = asset.address as Address;
       const ts = now();
 
-      const [reachability, liquidity, borrow, compliance] = await Promise.all([
+      const [reachability, liquidity, borrow, compliance, crossChain] = await Promise.all([
         findSecondaryVenues(client, network, addr, defillama, ts),
         analyzeLiquidity(client, network, addr, defillama, prices, ts),
         lendle.readReserve(client, network, addr, ts).catch(
@@ -123,6 +124,7 @@ export function createCapabilities(config: AppConfig): Capabilities {
               UNKNOWN_GATE(ts, "Etherscan compliance check failed (rate limit / transient)"),
             )
           : Promise.resolve(UNKNOWN_GATE(ts, "ETHERSCAN_API_KEY not set — compliance not source-verified")),
+        findCrossChainRoutes(client, network, addr, asset.symbol, ts).catch(() => undefined),
       ]);
 
       return assembleDistributionMap({
@@ -131,6 +133,7 @@ export function createCapabilities(config: AppConfig): Capabilities {
         liquidity,
         borrow,
         compliance,
+        crossChain,
         generatedAt: ts,
       });
     },

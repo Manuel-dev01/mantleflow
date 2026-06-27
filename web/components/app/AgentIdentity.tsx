@@ -1,23 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getAgent, type AgentInfo } from "../../lib/api";
 import { SourceTag } from "../SourceTag";
+import { RateAgent } from "./RateAgent";
 
 /**
  * The agent's ERC-8004 on-chain identity — a compact badge that expands to the verifiable details
- * (agentId, owner, registries, AgentCard, provenance-receipt count) read live from Mantle Sepolia.
- * Degrades honestly to "identity pending" when not yet registered.
+ * (agentId, owner, registries, AgentCard, genuine third-party reputation) read live from Mantle
+ * Sepolia, plus a "Rate this agent" flow. Degrades honestly to "identity pending" when unregistered.
  */
 export function AgentIdentity() {
   const [info, setInfo] = useState<AgentInfo | null>(null);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     getAgent()
       .then(setInfo)
       .catch(() => setInfo(null));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const registered = info?.registered && info.identity;
   const agentId = info?.identity?.value.agentId;
@@ -59,14 +64,21 @@ export function AgentIdentity() {
                 href={`${info.registry.explorer}/address/${info.registry.reputation}`}
               />
               <Row k="network" v={info.registry.network} />
-              {info.provenance ? (
-                <Row k="provenance receipts" v={String(info.provenance.value.count)} />
-              ) : null}
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-mut2">reputation</dt>
+                <dd className="m-0 flex items-center gap-1.5 text-paper">
+                  {info.reputation && info.reputation.value.count > 0
+                    ? `${info.reputation.value.count}★ rating${info.reputation.value.count === 1 ? "" : "s"}${info.reputation.value.avgScore != null ? ` · avg ${info.reputation.value.avgScore.toFixed(1)}` : ""}`
+                    : "none yet (third-party)"}
+                  {info.reputation ? <SourceTag receipt={info.reputation.receipt} /> : null}
+                </dd>
+              </div>
               <div className="pt-1">
                 <a href={info.registry.agentCardUrl} target="_blank" rel="noreferrer" className="text-acid underline">
                   AgentCard ↗
                 </a>
               </div>
+              {agentId ? <RateAgent agentId={agentId} onRated={load} /> : null}
             </dl>
           ) : (
             <p className="m-0 text-mut">

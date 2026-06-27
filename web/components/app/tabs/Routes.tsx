@@ -1,25 +1,75 @@
+import type { DistributionMap } from "@mantleflow/agent";
+import { routesOf } from "../../../lib/derive";
+import { SourceTag } from "../../SourceTag";
+
 /**
- * Cross-chain exit routes are a Phase-4 capability (CCIP / bridge lane availability + cost). Rather
- * than fabricate routes — as the original mockup did — we render an honest not-yet-computed state.
+ * Cross-chain exit routes — real, verified reach OFF Mantle: LayerZero OFT (on-chain endpoint probe)
+ * and Chainlink CCIP membership. Negative results are shown too (an absence is a distribution
+ * finding). Per-tx bridge fees are dynamic, so cost is honestly "not quoted" — never fabricated.
  */
-export function RoutesTab() {
+export function RoutesTab({ map }: { map: DistributionMap }) {
+  const { routes, status, explanation } = routesOf(map);
+
   return (
     <div className="px-[34px] py-[30px]">
-      <span className="font-mono text-xs tracking-[0.1em] text-mut">CROSS-CHAIN EXIT ROUTES</span>
-      <div className="mt-6 border-2 border-dashed border-line p-10">
-        <div className="mb-3 inline-block border-2 border-mut2 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-mut2">
-          Not yet computed · Phase 4
-        </div>
-        <h3 className="m-0 mb-3 max-w-[620px] font-display text-[clamp(22px,3vw,34px)] font-bold uppercase leading-[1.05]">
-          We don’t guess bridges.
-        </h3>
-        <p className="m-0 max-w-[600px] text-sm leading-[1.6] text-mut">
-          Cross-chain reach — which CCIP / canonical-bridge lanes exist and the estimated cost and slippage
-          to exit a position to another chain — is the next module on the roadmap. Until it reads real lane
-          availability on-chain, this panel stays empty on purpose: an unsourced route is worse than no
-          route. Reachability, depth, borrowability and compliance above are all live now.
-        </p>
+      <div className="mb-1 flex items-end justify-between">
+        <span className="font-mono text-xs tracking-[0.1em] text-mut">CROSS-CHAIN EXIT ROUTES</span>
+        <span
+          className={`font-mono text-[11px] ${
+            status === "computed" ? "text-acid" : "text-mut2"
+          }`}
+        >
+          {status === "computed" ? "ROUTE VERIFIED" : "NO ROUTE VERIFIED"}
+        </span>
       </div>
+      <p className="m-0 mb-6 max-w-[640px] text-sm leading-[1.6] text-mut">{explanation}</p>
+
+      {routes.length === 0 ? (
+        <div className="border-2 border-dashed border-line p-8 font-mono text-[11px] text-mut2">
+          Cross-chain reach could not be sourced this run.
+        </div>
+      ) : (
+        <div className="grid gap-0 border-2 border-paper md:grid-cols-3">
+          {routes.map((r, i) => (
+            <div
+              key={r.protocol}
+              className={`flex min-h-[150px] flex-col gap-2 border-paper p-5 ${
+                i < routes.length - 1 ? "border-b-2 md:border-b-0 md:border-r-2" : ""
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-display text-[17px] font-bold uppercase tracking-[-0.01em]">
+                  {r.protocol}
+                </span>
+                <span
+                  className={`h-2.5 w-2.5 ${r.available ? "bg-acid" : "border border-mut2"}`}
+                  title={r.available ? "available" : "not available"}
+                />
+              </div>
+              <div
+                className={`font-mono text-[10px] uppercase tracking-[0.06em] ${
+                  r.available ? "text-acid" : "text-mut2"
+                }`}
+              >
+                {r.available ? "available" : "not available"}
+              </div>
+              <p className="m-0 text-[13px] leading-[1.5] text-mut">{r.detail}</p>
+              {r.destinations.length > 0 ? (
+                <div className="font-mono text-[10px] text-mut2">→ {r.destinations.join(", ")}</div>
+              ) : null}
+              <div className="mt-auto flex items-center justify-between font-mono text-[10px] text-mut2">
+                <span>cost: {r.costUsd != null ? `$${r.costUsd}` : "not quoted"}</span>
+                <SourceTag receipt={r.receipt} label="" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="mt-4 font-mono text-[10px] leading-[1.7] text-mut2">
+        Verified on-chain (LayerZero V2 endpoint probe) + Chainlink CCIP directory. Issuer-specific
+        bridges we don’t probe aren’t claimed either way. Bridge fees are per-tx dynamic — not quoted.
+      </p>
     </div>
   );
 }

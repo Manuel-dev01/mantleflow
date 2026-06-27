@@ -51,6 +51,8 @@ export async function POST(req: Request) {
       txHash: res.txHash,
       resultHash: res.resultHash,
       agentId: res.agentId,
+      blockNumber: res.blockNumber,
+      verified: res.verified,
       explorerUrl: res.receipt.url,
       receipt: res.receipt,
     });

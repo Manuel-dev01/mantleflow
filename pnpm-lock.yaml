@@ -85,6 +85,9 @@ importers:
       react-markdown:
         specifier: ^9.0.1
         version: 9.1.0(@types/react@18.3.31)(react@18.3.1)
+      viem:
+        specifier: ^2.21.0
+        version: 2.53.1(typescript@5.9.3)(zod@3.25.76)
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
