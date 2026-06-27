@@ -60,6 +60,13 @@ Remaining open items are tracked in §6 (non-blocking).
   Sepolia later if needed).
 - **AgentCard** — JSON at an `agentURI` (`ipfs://`, `https://`, or `data:` URI) with `type`, `name`,
   `description`, `image`, `services[]` (A2A / MCP / web endpoints). — EIP-8004, 2026-06-25.
+- **Phase 3 write-ABI re-confirmation (2026-06-27)** — re-fetched the exact signatures from the
+  EIP-8004 spec (primary source). Identity is **ERC-721** (agent = NFT `agentId`): we use
+  `register(string agentURI) → uint256 agentId`, `setAgentURI`, plus ERC-721 `tokenURI`/`ownerOf`.
+  Reputation: `giveFeedback(uint256 agentId, int128 value, uint8 valueDecimals, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)` and `getSummary(uint256, address[], string, string) → (uint64 count, int128, uint8)`. Sepolia reachable, **`eth_chainId`→5003 confirmed live 2026-06-27**; both Sepolia registries return code (≈130-byte proxies). The Mantle-Sepolia explorer ABI API was unavailable, so per **D6** every write is **simulated on-chain (`simulateContract`) before broadcast** — a successful simulate against the deployed bytecode confirms the selector/args. ABI captured in `agent/src/erc8004/abis.ts`.
+- **Registered agentId** — _pending the live registration run_ (`agent/src/scripts/register-identity.ts`); record agentId + tx hash here once written.
+- **AgentCard (live)** — `https://mantleflow.vercel.app/.well-known/agent-card.json` (served by
+  `web/app/.well-known/agent-card.json/route.ts`); this is the `agentURI` we register.
 
 ## 4. AI Agent Skills (the bonus)
 

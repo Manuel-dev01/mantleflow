@@ -1,5 +1,12 @@
 import { mantle, mantleSepoliaTestnet } from "viem/chains";
-import { createPublicClient, http, type PublicClient } from "viem";
+import {
+  createPublicClient,
+  createWalletClient,
+  http,
+  type PublicClient,
+  type WalletClient,
+} from "viem";
+import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 
 /**
  * Mantle network configuration. Values verified in docs/VERIFIED.md (2026-06-25):
@@ -31,4 +38,26 @@ export function publicClientFor(
 
 export function explorerBaseFor(network: MantleNetwork): string {
   return network === "mainnet" ? EXPLORER_MAINNET : EXPLORER_SEPOLIA;
+}
+
+/** Derive the agent's account from a 0x private key (testnet-only — Sepolia writes). */
+export function accountFromKey(privateKey: string): PrivateKeyAccount {
+  return privateKeyToAccount(privateKey as `0x${string}`);
+}
+
+/**
+ * Write-capable client for Mantle Sepolia (ERC-8004 identity/reputation writes). Pairs a viem
+ * WalletClient (signing) with a PublicClient (reads/simulation/receipts) over the same RPC.
+ */
+export function walletClientForSepolia(
+  privateKey: string,
+  rpcUrl?: string,
+): { wallet: WalletClient; account: PrivateKeyAccount; public: PublicClient } {
+  const account = accountFromKey(privateKey);
+  const transport = http(rpcUrl ?? MANTLE_SEPOLIA_RPC);
+  return {
+    account,
+    wallet: createWalletClient({ account, chain: mantleSepoliaTestnet, transport }),
+    public: createPublicClient({ chain: mantleSepoliaTestnet, transport }),
+  };
 }

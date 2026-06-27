@@ -19,3 +19,16 @@ export { cpmmSlippagePct, STANDARD_CLEAR_SIZE_USD } from "./dex/slippage.js";
 export { type LendleReserve } from "./adapters/lendle.js";
 export { createCapabilities, type Capabilities } from "./capabilities.js";
 export { runQuery, type QueryResult } from "./orchestrator/orchestrator.js";
+export {
+  createErc8004Reader,
+  createErc8004Writer,
+  hashResult,
+  type Erc8004Reader,
+  type Erc8004Writer,
+  type IdentityView,
+  type ProvenanceSummary,
+  type RegisterResult,
+  type AttestResult,
+  type AttestInput,
+} from "./erc8004/client.js";
+export { IDENTITY_ABI, REPUTATION_ABI, PROVENANCE_TAG1 } from "./erc8004/abis.js";

@@ -12,6 +12,22 @@ export const AppConfigSchema = z.object({
   llmApiKey: z.string().min(1).optional(),
   llmBaseUrl: z.string().url().default("https://api.deepseek.com"),
   llmModel: z.string().default("deepseek-v4-flash"),
+  /**
+   * ERC-8004 agent signing key (Mantle Sepolia, testnet-only). Optional — all identity reads and
+   * the rest of the app degrade gracefully without it; only on-chain writes (register / provenance
+   * receipt) require it. Validated as a 0x-prefixed 32-byte hex private key.
+   */
+  agentPrivateKey: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{64}$/, "AGENT_PRIVATE_KEY must be a 0x-prefixed 32-byte hex key")
+    .optional(),
+  /** The agent's ERC-8004 token id, set after registration (string to avoid bigint coercion). */
+  agentId: z.string().regex(/^\d+$/).optional(),
+  /** Stable https AgentCard URI (served by the web app at /.well-known/agent-card.json). */
+  agentCardUrl: z
+    .string()
+    .url()
+    .default("https://mantleflow.vercel.app/.well-known/agent-card.json"),
 });
 
 export type AppConfig = z.infer<typeof AppConfigSchema>;
@@ -25,5 +41,8 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     llmApiKey: env.LLM_API_KEY,
     llmBaseUrl: env.LLM_BASE_URL ?? undefined,
     llmModel: env.LLM_MODEL ?? undefined,
+    agentPrivateKey: env.AGENT_PRIVATE_KEY,
+    agentId: env.AGENT_ID,
+    agentCardUrl: env.AGENT_CARD_URL ?? undefined,
   });
 }

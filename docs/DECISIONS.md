@@ -109,3 +109,28 @@ impact for a $250k exit, computed only for `cpmm-exact` venues (we hold their on
 TVL-proxy venues (v3 / Liquidity Book) report `null` → the UI shows "—" rather than an unsourced
 number. Surfaced as the Overview "BEST SLIP / $250k" stat (min across CPMM venues) and the Liquidity
 table's SLIP/250K column. No change to composite weighting.
+
+### D16 — Provenance receipts, not self-scores (ERC-8004 reputation usage)
+**Date:** 2026-06-27. **Status:** locked.
+An agent auto-writing its own reputation score would read as faked. Instead, each completed analysis
+can write a Reputation `giveFeedback` entry whose **`feedbackHash = keccak256(canonicalJSON(map))`**
+commits to the exact result, with **`value = 0` (neutral — provenance, not a rating)**,
+`tag1="distribution-analysis"`, `tag2=symbol`, `feedbackURI` → the re-derivable result. It is a
+tamper-evident on-chain record of work done; anyone can recompute the map, hash it, and check the
+commitment. The UI frames it as provenance, never a score. **User-triggered** ("Attest result
+on-chain"), not automatic. (`agent/src/erc8004/client.ts`, `web/app/api/attest`.)
+
+### D17 — MCP transport = stdio; packaged as an Anthropic SKILL.md skill
+**Date:** 2026-06-27. **Status:** locked.
+The agent ships as `@mantleflow/mcp` (a stdio MCP server over `createCapabilities`, tools
+`get_distribution_map`/`compare_assets`/`resolve_asset`/`list_tracked_assets`/`get_agent_identity`)
+wrapped by the open `SKILL.md` skill at `skill/mantleflow-distribution/` — the standard skills path
+(Claude Desktop / CLI). No hosted HTTP/SSE endpoint this phase (Phase 4+).
+
+### D18 — Agent identity on Mantle Sepolia; write ABI confirmed by simulation
+**Date:** 2026-06-27. **Status:** locked.
+ERC-8004 identity + provenance writes run on **Mantle Sepolia** (D2, D4). The deployed registries'
+write selectors are confirmed via on-chain `simulateContract` before broadcast (D6) since the
+explorer ABI API was unavailable; the ABI itself is the EIP-8004 spec (primary source). The signing
+key (`AGENT_PRIVATE_KEY`) is **testnet-only**, lives only in gitignored env + Vercel (encrypted), and
+the whole app degrades gracefully (identity "pending", attest 501) when it is absent.

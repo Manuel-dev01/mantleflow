@@ -1,6 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import type { DistributionMap } from "@mantleflow/agent";
 import { overviewStats } from "../../../lib/derive";
+import { attest, type AttestResponse } from "../../../lib/api";
 import { SourceTag } from "../../SourceTag";
 
 /**
@@ -64,6 +68,69 @@ export function OverviewTab({ map, answer }: { map: DistributionMap; answer: str
       <div className="mt-4 border-t-2 border-line pt-5 font-mono text-xs text-mut">
         DRILL DOWN → distribution map · liquidity depth · exit routes · compliance gates
       </div>
+
+      <AttestBlock map={map} />
+    </div>
+  );
+}
+
+/**
+ * On-chain provenance: write an ERC-8004 Reputation entry whose feedbackHash commits to THIS exact
+ * result. Framed as a tamper-evident provenance receipt of work done — NOT a self-awarded score.
+ */
+function AttestBlock({ map }: { map: DistributionMap }) {
+  const [state, setState] = useState<"idle" | "writing">("idle");
+  const [res, setRes] = useState<AttestResponse | null>(null);
+  const [unavailable, setUnavailable] = useState<string | null>(null);
+
+  async function onAttest() {
+    setState("writing");
+    setRes(null);
+    setUnavailable(null);
+    try {
+      const r = await attest(map);
+      if (r.ok) setRes(r.data);
+      else setUnavailable(r.data.error ?? "Attestation unavailable on this deployment.");
+    } catch (e) {
+      setUnavailable(e instanceof Error ? e.message : String(e));
+    } finally {
+      setState("idle");
+    }
+  }
+
+  return (
+    <div className="mt-6 border-2 border-line p-4">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span className="font-mono text-[11px] tracking-[0.08em] text-mut">ON-CHAIN PROVENANCE · ERC-8004</span>
+        <button
+          onClick={onAttest}
+          disabled={state === "writing"}
+          className="border-2 border-acid bg-transparent px-3 py-1.5 font-mono text-[11px] tracking-[0.04em] text-acid transition-colors hover:bg-acid hover:text-ink disabled:opacity-50"
+        >
+          {state === "writing" ? "WRITING…" : "ATTEST RESULT ON-CHAIN →"}
+        </button>
+      </div>
+      <p className="m-0 font-mono text-[10px] leading-[1.6] text-mut2">
+        Writes a tamper-evident receipt to Mantle Sepolia whose hash commits to this exact result — a
+        provenance record of work done, <span className="text-mut">not</span> a self-awarded score.
+      </p>
+
+      {res?.txHash ? (
+        <div className="mt-3 border-t-2 border-line pt-3 font-mono text-[11px]">
+          <div className="flex justify-between gap-3">
+            <span className="text-mut2">tx</span>
+            <a href={res.explorerUrl} target="_blank" rel="noreferrer" className="truncate text-acid underline">
+              {res.txHash}
+            </a>
+          </div>
+          <div className="mt-1 flex justify-between gap-3">
+            <span className="text-mut2">result hash</span>
+            <span className="truncate text-paper">{res.resultHash}</span>
+          </div>
+        </div>
+      ) : null}
+
+      {unavailable ? <p className="mt-3 font-mono text-[11px] text-mut">⚠ {unavailable}</p> : null}
     </div>
   );
 }

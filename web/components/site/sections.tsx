@@ -245,6 +245,35 @@ export function StatBand({ stats }: { stats: { v: string; k: string }[] }) {
   );
 }
 
+const STACK = [
+  { num: "01", title: "ERC-8004 Identity", body: "The agent holds an on-chain identity (ERC-721 agentId) on Mantle Sepolia and writes tamper-evident provenance receipts committing to each result." },
+  { num: "02", title: "MCP Server", body: "Every capability is exposed over the Model Context Protocol — any agent (Claude Desktop, A2A) can call MantleFlow's distribution tools." },
+  { num: "03", title: "AI Agent Skill", body: "Packaged as an open SKILL.md skill wrapping the MCP server — drop it into any skills-aware agent." },
+];
+
+export function AgentStack() {
+  return (
+    <div className="border-b-2 border-paper px-6 py-24 md:px-[34px]">
+      <div className="mb-[30px] font-mono text-xs tracking-[0.16em] text-mut">§05 — AGENT-NATIVE</div>
+      <h2 className="m-0 mb-14 max-w-[1000px] font-display text-[clamp(30px,5.2vw,68px)] font-bold uppercase leading-[0.95] tracking-[-0.02em]">
+        Built on Mantle's <span className="text-acid">agent stack.</span>
+      </h2>
+      <div className="grid border-2 border-paper md:grid-cols-3">
+        {STACK.map((c, i) => (
+          <div
+            key={c.num}
+            className={`group flex min-h-[210px] flex-col gap-3.5 border-paper px-[26px] pb-[34px] pt-[30px] transition-colors hover:bg-acid hover:text-ink ${i < 2 ? "border-b-2 md:border-b-0 md:border-r-2" : ""}`}
+          >
+            <span className="font-mono text-xs text-mut group-hover:text-ink">{c.num}</span>
+            <h3 className="m-0 font-display text-[22px] font-bold uppercase tracking-[-0.01em]">{c.title}</h3>
+            <p className="m-0 text-[14px] leading-[1.5] text-mut group-hover:text-ink">{c.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function Manifesto() {
   return (
     <div className="border-b-2 border-ink bg-acid px-6 py-28 text-ink md:px-[34px]">

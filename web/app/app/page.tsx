@@ -7,6 +7,7 @@ import { runQuery, getMap } from "../../lib/api";
 import { ASSETS } from "../../lib/assets";
 import { AskHome } from "../../components/app/AskHome";
 import { Workspace, type TabId } from "../../components/app/Workspace";
+import { AgentIdentity } from "../../components/app/AgentIdentity";
 
 const exampleFor = (sym: string) =>
   sym === "MI4"
@@ -83,12 +84,15 @@ export default function AppPage() {
             LIVE · MANTLE L2
           </span>
         </div>
-        <Link
-          href="/"
-          className="border-2 border-paper bg-transparent px-3.5 py-2 font-mono text-[11px] tracking-[0.04em] text-paper transition-colors hover:bg-paper hover:text-ink"
-        >
-          ← EXIT TO SITE
-        </Link>
+        <div className="flex items-center gap-3">
+          <AgentIdentity />
+          <Link
+            href="/"
+            className="border-2 border-paper bg-transparent px-3.5 py-2 font-mono text-[11px] tracking-[0.04em] text-paper transition-colors hover:bg-paper hover:text-ink"
+          >
+            ← EXIT TO SITE
+          </Link>
+        </div>
       </div>
 
       {view === "home" ? (

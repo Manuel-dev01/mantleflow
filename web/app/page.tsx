@@ -8,6 +8,7 @@ import {
   HowItWorks,
   ProductPreview,
   StatBand,
+  AgentStack,
   Manifesto,
   Footer,
 } from "../components/site/sections";
@@ -61,6 +62,7 @@ export default async function LandingPage() {
       <HowItWorks />
       <ProductPreview map={preview} />
       <StatBand stats={stats} />
+      <AgentStack />
       <Manifesto />
       <Footer />
     </main>
