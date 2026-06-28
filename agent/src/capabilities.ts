@@ -4,6 +4,7 @@ import { type MantleNetwork, publicClientFor } from "./config/chains.js";
 import { TRACKED_ASSETS } from "./config/addresses.js";
 import { createEtherscanAdapter } from "./adapters/etherscan.js";
 import { createDefiLlamaAdapter } from "./adapters/defillama.js";
+import { createGeckoTerminalAdapter } from "./adapters/geckoterminal.js";
 import { readTokenFacts } from "./adapters/erc20.js";
 import { findSecondaryVenues } from "./dex/reachability.js";
 import { analyzeLiquidity } from "./dex/depth.js";
@@ -12,7 +13,7 @@ import { createPriceAdapter } from "./adapters/prices.js";
 import { createLendleAdapter, type LendleReserve } from "./adapters/lendle.js";
 import { findCrossChainRoutes } from "./adapters/crosschain.js";
 import { assembleDistributionMap } from "./engine/engine.js";
-import { type ComplianceGate, type DistributionMap } from "./engine/types.js";
+import { type AssetMarketFacts, type ComplianceGate, type DistributionMap } from "./engine/types.js";
 import { type Sourced } from "./types/source-receipt.js";
 
 /**
@@ -36,6 +37,7 @@ function now(): string {
 
 export function createCapabilities(config: AppConfig): Capabilities {
   const defillama = createDefiLlamaAdapter();
+  const gt = createGeckoTerminalAdapter();
   const prices = createPriceAdapter("mantle");
   const lendle = createLendleAdapter();
   const etherscan = config.etherscanApiKey
@@ -91,9 +93,12 @@ export function createCapabilities(config: AppConfig): Capabilities {
       const addr = asset.address as Address;
       const ts = now();
 
-      const [reachability, liquidity, borrow, compliance, crossChain] = await Promise.all([
-        findSecondaryVenues(client, network, addr, defillama, ts),
-        analyzeLiquidity(client, network, addr, defillama, prices, ts),
+      // Fetch GeckoTerminal pools ONCE and share with reachability + depth so they never disagree on
+      // availability (a separate failed call must not make one say "no venue" while the other shows 20).
+      const gtPools = await gt.poolsResult(network, addr, ts);
+      const [reachability, liquidity, borrow, compliance, crossChain, market, tokenFacts] = await Promise.all([
+        findSecondaryVenues(client, network, addr, defillama, gtPools, ts),
+        analyzeLiquidity(client, network, addr, defillama, gtPools, prices, ts),
         lendle.readReserve(client, network, addr, ts).catch(
           (): Sourced<LendleReserve> => ({
             value: {
@@ -125,10 +130,29 @@ export function createCapabilities(config: AppConfig): Capabilities {
             )
           : Promise.resolve(UNKNOWN_GATE(ts, "ETHERSCAN_API_KEY not set — compliance not source-verified")),
         findCrossChainRoutes(client, network, addr, asset.symbol, ts).catch(() => undefined),
+        gt.tokenMarket(network, addr, ts).catch(() => null),
+        readTokenFacts(client, network, addr, ts).catch(() => null),
       ]);
+
+      // Token market facts (price/mcap/FDV/24h vol from GeckoTerminal; supply on-chain) — shown per
+      // asset so even illiquid ones surface real context. Omit when nothing was sourced.
+      const receipts = [market?.receipt, tokenFacts?.receipt].filter((r): r is NonNullable<typeof r> => !!r);
+      const facts: AssetMarketFacts | undefined =
+        market || tokenFacts
+          ? {
+              priceUsd: market?.value.priceUsd ?? null,
+              marketCapUsd: market?.value.marketCapUsd ?? null,
+              fdvUsd: market?.value.fdvUsd ?? null,
+              volume24hUsd: market?.value.volume24hUsd ?? null,
+              totalSupply: tokenFacts?.value.totalSupply != null ? tokenFacts.value.totalSupply.toString() : null,
+              decimals: tokenFacts?.value.decimals ?? asset.decimals ?? null,
+              receipts,
+            }
+          : undefined;
 
       return assembleDistributionMap({
         asset: { symbol: asset.symbol, name: asset.name, address: asset.address, network },
+        ...(facts ? { facts } : {}),
         reachability,
         liquidity,
         borrow,

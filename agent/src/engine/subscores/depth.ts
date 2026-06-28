@@ -21,10 +21,11 @@ export function depthSubScore(liq: LiquidityResult): SubScore {
       inputs,
     };
   }
+  const hasExact = liq.swapVenues.some((v) => v.method === "cpmm-exact");
   const depthNote =
     liq.totalDepthUsdAt2pct > 0
-      ? ` ~${fmtUsd(liq.totalDepthUsdAt2pct)} tradeable within ±2% of mid (constant-product venues).`
-      : " ±2% depth not precisely computable (venues are TVL-proxy only).";
+      ? ` ~${fmtUsd(liq.totalDepthUsdAt2pct)} tradeable within ±2% of mid (${hasExact ? "exact on-chain reserves + " : ""}CPMM estimate from pool reserves).`
+      : " ±2% depth not computable for these venues.";
   return {
     id: "liquidity-depth",
     label: "Liquidity depth (±2% of mid)",

@@ -4,6 +4,7 @@ import { MANTLE_DEX_FACTORIES, QUOTE_TOKENS } from "./factories.js";
 import { cpmmSlippagePct, STANDARD_CLEAR_SIZE_USD } from "./slippage.js";
 import { hasCode } from "../lib/onchain.js";
 import { type DefiLlamaAdapter, classifyLlamaPool } from "../adapters/defillama.js";
+import { type GtPoolsResult } from "../adapters/geckoterminal.js";
 import type { PriceAdapter } from "../adapters/prices.js";
 import type { SourceReceipt } from "../types/source-receipt.js";
 
@@ -20,10 +21,16 @@ export interface VenueLiquidity {
   depthUsdAt2pct: number | null;
   /** Constant-product price impact (%) to clear a $250k order; null for TVL-proxy venues. */
   slipPctAt250k: number | null;
-  method: "cpmm-exact" | "tvl-proxy";
+  /** cpmm-exact = on-chain reserves (fact); gt-estimate = GeckoTerminal reserve → CPMM approximation
+   * (estimate); tvl-proxy = DefiLlama TVL magnitude only. */
+  method: "cpmm-exact" | "gt-estimate" | "tvl-proxy";
   /** swap = genuine trading venue (counts toward depth); yield = single-asset position (does not). */
   venueType: "swap" | "yield";
   classification?: string;
+  /** Friendly DEX name (e.g. "Agni") when known. */
+  dex?: string | undefined;
+  /** 24h trade volume in USD when known. */
+  volume24hUsd?: number | undefined;
   receipt: SourceReceipt;
 }
 
@@ -75,16 +82,23 @@ export async function analyzeLiquidity(
   network: MantleNetwork,
   asset: Address,
   llama: DefiLlamaAdapter,
+  gtPools: GtPoolsResult,
   prices: PriceAdapter,
   observedAt: string,
 ): Promise<LiquidityResult> {
   const explorer = explorerBaseFor(network);
   const venues: VenueLiquidity[] = [];
+  const seenPools = new Set<string>(); // dedupe GeckoTerminal vs on-chain by pool address
 
-  // 1) Uniswap-v2-style pairs — exact reserves + ±2% depth.
+  // 1) Uniswap-v2-style pairs — exact reserves + ±2% depth. Best-effort (GeckoTerminal is primary);
+  //    a transient RPC failure here must not sink the map.
   for (const factory of MANTLE_DEX_FACTORIES) {
     if (factory.kind !== "v2") continue;
-    if (!(await hasCode(client, factory.address))) continue;
+    try {
+      if (!(await hasCode(client, factory.address))) continue;
+    } catch {
+      continue;
+    }
     for (const quote of QUOTE_TOKENS) {
       let pair: Address;
       try {
@@ -119,6 +133,7 @@ export async function analyzeLiquidity(
       const quoteReserveUsd = (Number(quoteReserveRaw) / 10 ** quote.decimals) * quotePrice;
       if (quoteReserveUsd <= 0) continue;
 
+      seenPools.add(pair.toLowerCase());
       venues.push({
         venue: `${factory.name} ·/${quote.symbol}`,
         liquidityUsd: quoteReserveUsd * 2, // balanced pool ≈ 2× one side
@@ -128,6 +143,7 @@ export async function analyzeLiquidity(
         slipPctAt250k: cpmmSlippagePct(quoteReserveUsd, STANDARD_CLEAR_SIZE_USD),
         method: "cpmm-exact",
         venueType: "swap", // an on-chain CPMM pair is a genuine trading venue
+        dex: factory.name,
         receipt: {
           sourceName: "Mantle RPC (getReserves)",
           url: `${explorer}/address/${pair}`,
@@ -139,18 +155,45 @@ export async function analyzeLiquidity(
     }
   }
 
-  // 2) DefiLlama pools — TVL as the liquidity proxy for v3 / Liquidity Book venues, classified
-  //    swap vs yield (single-asset vault TVL is not tradeable secondary liquidity).
+  // 2) GeckoTerminal DEX pools — the comprehensive Mantle DEX index (Agni, Merchant Moe LB, FusionX,
+  //    …). reserve_in_usd is total two-sided liquidity → one side ≈ reserve/2; the ±2% depth and
+  //    $250k slippage are a CPMM APPROXIMATION (labelled gt-estimate / kind:"estimate", never a fact).
+  // Shared GeckoTerminal pools (fetched once upstream). When ok=false the index was unreachable —
+  // depth falls back to on-chain venues; reachability flags it insufficient-data.
+  for (const p of gtPools.pools) {
+    if (seenPools.has(p.poolAddress.toLowerCase())) continue; // on-chain exact already counted
+    seenPools.add(p.poolAddress.toLowerCase());
+    const sideUsd = p.liquidityUsd / 2;
+    venues.push({
+      venue: `${p.dexLabel} · ${p.venue}`,
+      liquidityUsd: p.liquidityUsd,
+      depthUsdAt2pct: sideUsd * TWO_PCT_FRACTION,
+      slipPctAt250k: cpmmSlippagePct(sideUsd, STANDARD_CLEAR_SIZE_USD),
+      method: "gt-estimate",
+      venueType: "swap",
+      dex: p.dexLabel,
+      volume24hUsd: p.volume24hUsd,
+      receipt: {
+        ...gtPools.receipt,
+        kind: "estimate",
+        url: `${explorer}/address/${p.poolAddress}`,
+        note: `${p.dexLabel} ${p.venue}: GeckoTerminal reserve $${Math.round(p.liquidityUsd)}, 24h vol $${Math.round(p.volume24hUsd)}; ±2% depth & $250k slip = CPMM approximation (reserve/2 per side)`,
+      },
+    });
+  }
+
+  // 3) DefiLlama — YIELD/vault positions only (single-asset TVL; not tradeable secondary liquidity).
   const pools = await llama.poolsForToken(asset, observedAt);
   for (const p of pools.value) {
     const c = classifyLlamaPool(p);
+    if (c.type !== "yield") continue;
     venues.push({
       venue: `${p.project} ${p.symbol}`,
       liquidityUsd: p.tvlUsd,
       depthUsdAt2pct: null,
       slipPctAt250k: null,
       method: "tvl-proxy",
-      venueType: c.type,
+      venueType: "yield",
       classification: c.reason,
       receipt: { ...pools.receipt, note: `DefiLlama pool ${p.pool} · TVL $${Math.round(p.tvlUsd)} — ${c.reason}` },
     });

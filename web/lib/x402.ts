@@ -69,7 +69,7 @@ export async function payAndRunQuery(query: string, onStep?: (s: DeepDiveStep) =
   let res = await fetch("/api/query", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, deep: true }),
   });
   if (res.status !== 402) {
     const data = (await res.json()) as DeepDiveResult;
@@ -105,7 +105,7 @@ export async function payAndRunQuery(query: string, onStep?: (s: DeepDiveStep) =
   res = await fetch("/api/query", {
     method: "POST",
     headers: { "content-type": "application/json", "X-PAYMENT": xPayment },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, deep: true }),
   });
   const data = (await res.json()) as DeepDiveResult;
   return { ...data, paid: true };

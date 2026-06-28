@@ -13,33 +13,36 @@
 - [ ] Every stat chip has a hoverable source receipt (⌖/SRC). StatBand reads 6 / 6 / 100%.
 - [ ] All CTAs route to `/app`.
 
-## 2. Ask flow (`/app`)
-- [ ] Typing *"I hold $1M of MI4 — where can I exit it, and am I gated?"* → resolves MI4, renders the
-      free distribution map (no payment).
-- [ ] Asset chips MI4 / mETH / cmETH / fBTC / USDe / USDY each load via `/api/map` (fast, free).
+## 2. Ask flow (`/app`) — the agent ANSWERS (free)
+- [ ] Typing *"what is mETH about and where can I trade it?"* → returns a **real agent answer** (FREE,
+      no payment): names DEX venues + liquidity + 24h volume + a best-exit suggestion, citing
+      GeckoTerminal. NOT just the templated headline.
+- [ ] *"I hold $1M of MI4 — where can I exit it, and am I gated?"* → answer states there's no on-chain
+      venue + the Securitize allowlist.
+- [ ] Asset chips MI4 / mETH / cmETH / fBTC / USDe / USDY each load fast (chip switch is map-only).
+- [ ] A **token facts strip** (PRICE / MARKET CAP / FDV / 24H VOL / SUPPLY) shows on every tab.
 
 ## 3. Overview tab
-- [ ] Headline (display font) + composite + 4 stats render; VENUES counts **trading venues only**.
-- [ ] mETH: VENUES = 0, DEPTH = —, HOLDING = BLOCKABLE (account blocklist). MI4: HOLDING = GATED.
-      USDe: HOLDING = OPEN. No asset shows UNVERIFIED or a "0/100" composite (composite is "—" if <3
-      sub-scores compute).
-- [ ] After a paid deep-dive (see §7), the LLM answer renders **markdown tables as real tables** and
-      lists/headings cleanly, at a readable size (not giant display font).
+- [ ] Headline + composite + 4 stats render; VENUES counts **trading venues only**.
+- [ ] mETH: VENUES ≈ **20**, DEPTH ≈ **$4.3M**, HOLDING = BLOCKABLE. USDe: VENUES ≈ 20, DEPTH ≈ **$17.5M**,
+      HOLDING = OPEN. **MI4: VENUES = 0** (genuinely no venue), HOLDING = GATED. USDY: 20 venues but
+      DEPTH ≈ **$5k** (dust). No asset shows a misleading "0/100" composite (composite "—" if <3 compute).
+- [ ] The free agent answer renders **markdown tables as real tables** + lists/headings at a readable size.
 - [ ] Source receipts resolve on each stat.
 
 ## 4. Distribution map tab
 - [ ] **No "PHASE 4" node anywhere.**
+- [ ] mETH/cmETH/fBTC/USDe/USDY show multiple **trading** nodes (real DEX pools); MI4 shows none.
 - [ ] Cross-chain shows the real state: for cmETH/USDe a **BRIDGE** node (LayerZero); for mETH/MI4 a
-      "NO ROUTE" gated node.
-- [ ] Yield/vault nodes (e.g. woofi-earn, circuit-protocol on mETH) are visually distinct (dotted,
-      "YIELD") from trading nodes.
+      "NO ROUTE" gated node. Yield/vault nodes are visually distinct (dotted, "YIELD").
 - [ ] Legend reads TRADING / BRIDGE / YIELD / GATED.
 
 ## 5. Liquidity tab
-- [ ] Split into **TRADING VENUES** and **YIELD / VAULT POSITIONS (informational)**.
-- [ ] For mETH: trading total = "—" / 0 venues; woofi-earn + circuit-protocol appear under YIELD with
-      TVL only (explicitly "not exit liquidity").
-- [ ] SLIP/250K shows a number on CPMM pairs, "—" (with caption) on TVL-proxy venues.
+- [ ] Split into **TRADING VENUES** (with DEX name + liquidity + **24H VOL** + slip estimate) and
+      **YIELD / VAULT POSITIONS (informational)**.
+- [ ] mETH/USDe show a real venue table (Agni, Merchant Moe LB, …); USDY shows 20 venues at dust depth;
+      **MI4 shows the honest "no genuine trading venue" finding** (with any yield positions below).
+- [ ] SLIP/250K shows an estimate (labelled) from pool reserves; venues without reserves show "—".
 
 ## 6. Routes tab
 - [ ] cmETH / USDe → "ROUTE VERIFIED" + a green LayerZero-OFT card.
@@ -54,12 +57,13 @@
       not 91 — the two no longer contradict.
 - [ ] Jurisdiction-omission note present.
 
-## 8. x402 pay-per-query (Sepolia)
-- [ ] `POST /api/query` with no payment → **HTTP 402** + a well-formed challenge.
-- [ ] In Overview, "RUN AI DEEP-DIVE · 0.01 tmUSD" → faucet mint → sign (no gas) → settle → answer +
-      a real Sepolia settlement tx link. Buyer needs **0 MNT, 0 real money**.
+## 8. x402 pay-per-query (Sepolia) — gates only the PREMIUM deep-dive
+- [ ] `POST /api/query {query}` (no `deep`) → **200 + a real answer, FREE** (no payment).
+- [ ] `POST /api/query {query, deep:true}` → **HTTP 402** + a well-formed challenge.
+- [ ] In Overview, "RUN AI DEEP-DIVE" (the premium) → faucet mint → sign (no gas) → settle → a deeper
+      cross-asset answer + a real Sepolia settlement tx link. Buyer needs **0 MNT, 0 real money**.
 - [ ] Re-submitting the same nonce is rejected on-chain (replay protection).
-- [ ] `/api/map` and all browsing remain free.
+- [ ] `/api/map` + the free basic query remain free.
 
 ## 9. ERC-8004 identity + provenance + reputation
 - [ ] Identity badge shows agentId + network; AgentCard (`/.well-known/agent-card.json`) advertises the
@@ -80,9 +84,10 @@
 
 ## Quick CLI smoke
 ```bash
-# 402 gate live + free map free + agent card
-curl -s -o /dev/null -w "%{http_code}\n" -X POST https://mantleflow.vercel.app/api/query -H "content-type: application/json" -d '{"query":"x"}'   # 402
-curl -s -o /dev/null -w "%{http_code}\n" "https://mantleflow.vercel.app/api/map?symbol=MI4"                                                       # 200
+# basic query is FREE (200, real answer); only deep:true is x402-gated (402)
+curl -s -o /dev/null -w "%{http_code}\n" -X POST https://mantleflow.vercel.app/api/query -H "content-type: application/json" -d '{"query":"what is mETH"}'           # 200
+curl -s -o /dev/null -w "%{http_code}\n" -X POST https://mantleflow.vercel.app/api/query -H "content-type: application/json" -d '{"query":"x","deep":true}'          # 402
+curl -s -o /dev/null -w "%{http_code}\n" "https://mantleflow.vercel.app/api/map?symbol=MI4"                                                                          # 200
 curl -s https://mantleflow.vercel.app/.well-known/agent-card.json | head -c 400
 # local engine sanity (accurate sub-scores)
 pnpm -C agent test && pnpm -C agent typecheck && pnpm -C web build

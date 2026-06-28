@@ -4,6 +4,7 @@ import { type SecondaryVenue } from "../engine/types.js";
 import { hasCode } from "../lib/onchain.js";
 import { MANTLE_DEX_FACTORIES, QUOTE_TOKENS } from "./factories.js";
 import { type DefiLlamaAdapter, classifyLlamaPool } from "../adapters/defillama.js";
+import { type GtPoolsResult } from "../adapters/geckoterminal.js";
 
 const V2_FACTORY_ABI = [
   {
@@ -25,8 +26,11 @@ export interface ReachabilityResult {
   swapVenues: SecondaryVenue[];
   /** Single-asset yield/lending/vault positions — surfaced but NOT counted as exit routes. */
   yieldVenues: SecondaryVenue[];
-  /** True when no genuine secondary TRADING venue was found via probed venues — a thesis headline. */
+  /** True when no genuine secondary TRADING venue was found AND the DEX index was reachable. */
   noSecondaryMarket: boolean;
+  /** Whether the GeckoTerminal DEX index responded — false ⇒ we couldn't fully check (don't claim
+   * "no venue"; the engine reports insufficient-data instead of a false absence). */
+  gtSourced: boolean;
 }
 
 /**
@@ -39,14 +43,22 @@ export async function findSecondaryVenues(
   network: MantleNetwork,
   token: Address,
   llama: DefiLlamaAdapter,
+  gtPools: GtPoolsResult,
   observedAt: string,
 ): Promise<ReachabilityResult> {
   const venues: SecondaryVenue[] = [];
   const explorer = explorerBaseFor(network);
+  const seenPools = new Set<string>(); // dedupe GeckoTerminal vs on-chain by pool address
 
   for (const factory of MANTLE_DEX_FACTORIES) {
-    if (factory.kind !== "v2") continue; // LB + Agni handled in Phase 2
-    if (!(await hasCode(client, factory.address))) continue; // address-trust: confirm on-chain
+    if (factory.kind !== "v2") continue; // classic-v2 only; LB/Agni/etc. come from GeckoTerminal below
+    // On-chain probe is a best-effort corroboration of exact reserves — GeckoTerminal is the primary
+    // venue source, so a transient RPC failure here must NOT sink the map.
+    try {
+      if (!(await hasCode(client, factory.address))) continue; // address-trust: confirm on-chain
+    } catch {
+      continue;
+    }
     for (const quote of QUOTE_TOKENS) {
       let pair: Address;
       try {
@@ -60,11 +72,13 @@ export async function findSecondaryVenues(
         continue;
       }
       if (pair && getAddress(pair) !== zeroAddress) {
+        seenPools.add(pair.toLowerCase());
         venues.push({
           venue: `${factory.name} ${"<token>"}/${quote.symbol}`,
           kind: "dex-pair",
           venueType: "swap", // an on-chain v2 pair is a genuine trading venue
           classification: `on-chain ${factory.name} pair (token/${quote.symbol})`,
+          dex: factory.name,
           pairAddress: pair,
           receipt: {
             sourceName: "Mantle RPC (eth_call)",
@@ -78,14 +92,36 @@ export async function findSecondaryVenues(
     }
   }
 
-  // DefiLlama cross-check — classify each pool as a genuine swap venue vs a yield/vault position.
+  // GeckoTerminal — the comprehensive DEX index across all Mantle DEXs (the primary swap-venue source;
+  // our on-chain probe only covers Merchant Moe v2). Every GT pool is a genuine trading venue. The
+  // pools were fetched ONCE upstream and shared with depth; `ok=false` (rate-limit/outage) must NOT be
+  // read as "0 venues".
+  const gtSourced = gtPools.ok;
+  for (const p of gtPools.pools) {
+    if (seenPools.has(p.poolAddress.toLowerCase())) continue; // already found on-chain (exact)
+    seenPools.add(p.poolAddress.toLowerCase());
+    venues.push({
+      venue: `${p.dexLabel} · ${p.venue}`,
+      kind: "dex-pool",
+      venueType: "swap",
+      classification: `DEX pool on ${p.dexLabel} (GeckoTerminal)`,
+      dex: p.dexLabel,
+      volume24hUsd: p.volume24hUsd,
+      pairAddress: p.poolAddress,
+      receipt: { ...gtPools.receipt, note: `${p.dexLabel} ${p.venue} — liq $${Math.round(p.liquidityUsd)}, 24h vol $${Math.round(p.volume24hUsd)}` },
+    });
+  }
+
+  // DefiLlama — keep only YIELD/vault positions (single-asset deposits). GeckoTerminal supersedes
+  // DefiLlama's swap pools (avoids double-counting); yield positions are surfaced, not counted.
   const llamaPools = await llama.poolsForToken(token, observedAt);
   for (const p of llamaPools.value) {
     const c = classifyLlamaPool(p);
+    if (c.type !== "yield") continue;
     venues.push({
       venue: `${p.project} ${p.symbol}`,
       kind: "dex-pool",
-      venueType: c.type,
+      venueType: "yield",
       classification: c.reason,
       receipt: { ...llamaPools.receipt, note: `DefiLlama pool ${p.pool} (TVL $${Math.round(p.tvlUsd)}) — ${c.reason}` },
     });
@@ -93,7 +129,8 @@ export async function findSecondaryVenues(
 
   const swapVenues = venues.filter((v) => v.venueType === "swap");
   const yieldVenues = venues.filter((v) => v.venueType === "yield");
-  // "No secondary market" now means no genuine TRADING venue (yield/vault positions don't count as
-  // exit liquidity). Scoped to the venues we probe — see the sub-score explanation.
-  return { venues, swapVenues, yieldVenues, noSecondaryMarket: swapVenues.length === 0 };
+  // "No secondary market" means no genuine TRADING venue AND we actually reached the DEX index. If GT
+  // was unreachable and on-chain found nothing, we can't claim absence — the engine reports
+  // insufficient-data instead (never a false "no venue").
+  return { venues, swapVenues, yieldVenues, noSecondaryMarket: swapVenues.length === 0 && gtSourced, gtSourced };
 }

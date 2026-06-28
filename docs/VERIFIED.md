@@ -186,15 +186,11 @@ Remaining open items are tracked in §6 (non-blocking).
   (`multi` = a 2-sided AMM/trading pool; `single` = a single-asset deposit = yield/lending/vault).
   Verified live across all 37 Mantle pools: only **`fluxion-network` is `multi`**; `aave-v3`,
   `woofi-earn`, `circuit-protocol`, `ondo-yield-assets`, `clearpool-lending`, etc. are all `single`.
-  Per-asset: MI4 = 0 pools; mETH = woofi-earn + circuit-protocol (both `single`/yield); cmETH =
-  woofi-earn (yield); fBTC/USDe = aave-v3 (yield); USDY = ondo-yield-assets (yield). ⇒ **none of the
-  six tracked assets has a genuine secondary TRADING venue via probed venues** (Merchant Moe v2
-  `getPair` + DefiLlama AMM pools). Reachability/depth/fragmentation now count swap venues only; yield
-  positions are surfaced separately. (D24.)
+  Yield positions are surfaced separately. (D24.) **NOTE — partially SUPERSEDED by §11:** DefiLlama's
+  yields endpoint only surfaces *yield* pools, so concluding "no trading venue" from it was a coverage
+  gap. GeckoTerminal (§11) shows 5 of 6 assets DO have real DEX trading venues; only MI4 truly has none.
 - **Borrowability now reflects frozen reserves** — mETH's Lendle reserve is **FROZEN**; the sub-score
   returns **20** (was ~91 from LTV) so it no longer contradicts the on-chain frozen flag. (D25.)
-- **Live engine read (2026-06-27, post-fix):** MI4 → composite **5** (gated + no trading venue + not
-  borrowable); mETH → composite **34** (reachability 0, borrowability 20 frozen, compliance 90 open).
 - **Compliance tiers (D26) — on-chain ABI reads, 2026-06-27.** Three tiers, not a binary:
   permissioned (allowlist → score 15, "GATED"), restrictable (blocklist/sanctions → 60, "BLOCKABLE"),
   open (90). Verified per asset (effective/impl ABI via Etherscan V2): **MI4** = GATED (Securitize
@@ -223,6 +219,40 @@ Remaining open items are tracked in §6 (non-blocking).
 - **Go-live (owner action):** set on Vercel (Production) **BOTH** `ERC8004_NETWORK=mainnet` and
   `AGENT_ID=141` (they must change together — `AGENT_ID` 309 is a Sepolia id), then deploy the
   dual-network code. Sepolia agentId 309 + its registries remain valid for reference.
+
+## 11. GeckoTerminal DEX data + free LLM tier (confirmed 2026-06-27, D27/D28)
+
+- **GeckoTerminal** (`api.geckoterminal.com/api/v2`, keyless) is now the **primary DEX venue +
+  liquidity + market-facts source** (`agent/src/adapters/geckoterminal.ts`). It indexes **10+ Mantle
+  DEXs** (Agni, Merchant Moe classic + **Liquidity Book**, FusionX, Cleopatra, iZiSwap, Butter, Oku,
+  Swapsicle, Fluxion) — the liquidity our single Merchant-Moe-v2 probe missed. `…/tokens/{addr}/pools`
+  → real pools (`reserve_in_usd`, 24h volume, dex id, pool address); `…/tokens/{addr}` → price / mcap /
+  FDV / 24h volume.
+- **CORRECTION (supersedes the §10 "no venue" conclusion):** that conclusion was a coverage gap of the
+  DefiLlama-yields probe. With GeckoTerminal, **5 of 6 tracked assets have real DEX trading venues** —
+  only **MI4** (permissioned RWA) genuinely has none. Live engine read (2026-06-27, consistent):
+
+  | Asset | DEX venues | Total liquidity | Composite | Note |
+  |-------|-----------|-----------------|-----------|------|
+  | MI4   | **0**     | $0              | 5         | genuinely no on-chain venue — permissioned |
+  | mETH  | 20        | ~$4.3M          | 69        | Merchant Moe LB + Agni |
+  | cmETH | 20        | ~$1.9M          | 66        |  |
+  | fBTC  | 16        | ~$1.4M          | 57        | top: USDT0/FBTC ~$1.35M |
+  | USDe  | 20        | **~$17.5M**     | 77        | most liquid tracked asset |
+  | USDY  | 20        | ~$5k            | 52        | listed widely but **dust** liquidity (a real depth finding) |
+
+- **Accuracy guards:** GeckoTerminal is rate-limited (~30/min). A failed pools call **must not** read as
+  "0 venues" — `poolsResult` is fetched ONCE per asset and shared by reachability + depth (so they never
+  disagree); on failure reachability reports **insufficient-data**, never a false absence. Per-pool ±2%
+  depth + $250k slippage are a labelled **CPMM estimate** (`gt-estimate`, `kind:"estimate"`), never a
+  fact. Token market facts render per asset (price/mcap/FDV/24h vol/supply).
+- **Free LLM answer tier (D28):** `/api/query` gates on `deep === true` only; a basic question runs the
+  LLM **free** and returns a real, data-grounded NL answer (confirmed live: a "what is mETH / where can I
+  trade it" query returned a venue table with DEX names + liquidity + 24h volume + a best-exit
+  recommendation, citing GeckoTerminal). The x402 premium deep-dive (ranked $1M-exit playbook +
+  cross-asset comparison) is gated via `deep:true`.
+- **Lending:** Aave-v3 is **not** in the official Aave address book for Mantle → borrowability stays
+  **Lendle-only**; Aave-v3 / INIT deferred until an address is on-chain-verified (D29).
 
 ## §6. Open items to close (non-blocking for architecture lock)
 

@@ -12,6 +12,18 @@ export function fmtPct(n: number | null | undefined, dp = 2): string {
   return n == null || !isFinite(n) ? "—" : `${n.toFixed(dp)}%`;
 }
 
+/** Humanized token supply from a raw integer string + decimals (e.g. "1.35M", "28.7K"). */
+export function fmtSupply(raw: string | null, decimals: number | null): string {
+  if (raw == null) return "—";
+  const d = decimals ?? 18;
+  const n = Number(raw) / 10 ** d;
+  if (!isFinite(n) || n <= 0) return "—";
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+  return n.toFixed(2);
+}
+
 /** ISO timestamp → `YYYY-MM-DD HH:MM`. */
 export function fmtWhen(iso: string): string {
   try {

@@ -1,5 +1,6 @@
 import type { DistributionMap } from "@mantleflow/agent";
 import { AssetChips } from "./AssetChips";
+import { FactsStrip } from "./FactsStrip";
 import { fmtWhen } from "../../lib/format";
 import { OverviewTab } from "./tabs/Overview";
 import { DistributionTab } from "./tabs/Distribution";
@@ -60,6 +61,9 @@ export function Workspace({
           </button>
         </div>
       </div>
+
+      {/* token market facts — shown on every tab */}
+      {map ? <FactsStrip facts={map.facts} symbol={map.asset.symbol} /> : null}
 
       <div className="grid flex-1 md:grid-cols-[220px_1fr]">
         {/* left nav */}

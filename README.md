@@ -33,10 +33,14 @@ A finding of *"no secondary market"* or *"holder is gated"* is a headline result
 ```
 
 ## Status — all four Mantle agent primitives live, reading real data
-- **Distribution Score engine** over 6 assets (MI4, mETH, cmETH, fBTC, USDe, USDY): reachability,
-  liquidity depth (±2% exact for CPMM, labelled TVL proxy elsewhere), HHI fragmentation,
-  borrowability (Lendle, on-chain), cross-chain (LayerZero OFT + CCIP), compliance gating — every
-  datum source-receipted, the composite labelled with exactly which sub-scores it includes.
+- **The agent answers questions for free** — a typed question runs the LLM and returns a real,
+  data-grounded answer (venues by DEX + liquidity + 24h volume, borrowability, gates), with the x402
+  premium reserved for a deeper cross-asset deep-dive.
+- **Distribution Score engine** over 6 assets (MI4, mETH, cmETH, fBTC, USDe, USDY): real DEX venues +
+  liquidity + 24h volume across **all Mantle DEXs** (GeckoTerminal), ±2%/slippage estimates, HHI
+  fragmentation, borrowability (Lendle, on-chain), cross-chain (LayerZero OFT + CCIP), compliance
+  gating, and token market facts (price/mcap/FDV/volume) — every datum source-receipted, the composite
+  labelled with exactly which sub-scores it includes.
 - **AI Agent Skill** (the bonus) — `skill/mantleflow-distribution/` (open `SKILL.md` format) wrapping
   the **MCP server** (`/mcp`, stdio).
 - **ERC-8004 identity** — **registered on Mantle mainnet as agentId `141`** (dual-network; topic0
@@ -48,13 +52,13 @@ A finding of *"no secondary market"* or *"holder is gated"* is a headline result
   on-chain (testnet tmUSD, gasless buyer via server faucet); gates `/api/query` only, all browsing
   free; QuestFlow facilitator + mainnet USDC pluggable via env.
 
-Headline findings (live): **MI4** is GATED (Securitize allowlist — must be approved) with **no on-chain
-secondary venue** — issued but undistributed; **none of the six tracked assets has a genuine secondary
-*trading* venue on Mantle** (they sit in yield/lending — measured by classifying AMM vs single-asset
-pools); compliance resolves into **three tiers** — MI4 gated, **mETH/cmETH/fBTC/USDY BLOCKABLE**
-(blocklist/sanctions controls, surfaced for the first time), only **USDe fully open**; **mETH**'s Lendle
-reserve is **FROZEN** (borrowability scored accordingly, not by raw LTV); **RWAs bridge by LayerZero OFT
-or not at all** (cmETH/USDe verified, none on Mantle's CCIP set); **syrupUSDT left Mantle**. Full writeup:
+Headline findings (live): distribution varies enormously — **MI4** is GATED (Securitize allowlist) with
+**no on-chain secondary venue** (issued but undistributed), while **USDe** has **~$17.5M** of DEX
+liquidity across 20 pools; **USDY** is a striking middle case — listed on 20 pools yet only **~$5k** of
+real depth. Compliance resolves into **three tiers** — MI4 GATED, **mETH/cmETH/fBTC/USDY BLOCKABLE**
+(blocklist/sanctions controls, surfaced for the first time), only **USDe fully OPEN**; **mETH**'s Lendle
+reserve is **FROZEN** (borrowability scored accordingly, not raw LTV); **RWAs bridge by LayerZero OFT or
+not at all** (cmETH/USDe verified, none on Mantle's CCIP set); **syrupUSDT left Mantle**. Full writeup:
 [`docs/RESEARCH.md`](docs/RESEARCH.md) · checklist: [`docs/DEMO_CHECKLIST.md`](docs/DEMO_CHECKLIST.md).
 Fact ledger: [`docs/VERIFIED.md`](docs/VERIFIED.md) · decisions: [`docs/DECISIONS.md`](docs/DECISIONS.md).
 

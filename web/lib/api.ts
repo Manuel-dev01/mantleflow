@@ -7,12 +7,13 @@ export interface QueryResponse {
   error?: string;
 }
 
-/** Full NL query → LLM answer + structured map (slower; runs the orchestrator). */
-export async function runQuery(query: string): Promise<QueryResponse> {
+/** Full NL query → LLM answer + structured map (runs the orchestrator). Basic (deep=false) is FREE;
+ * deep=true is the x402 premium (use payAndRunQuery for that). */
+export async function runQuery(query: string, deep = false): Promise<QueryResponse> {
   const res = await fetch("/api/query", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, deep }),
   });
   return (await res.json()) as QueryResponse;
 }

@@ -24,18 +24,24 @@ const PREVIEW_SYMBOL = "MI4";
 
 async function loadPreview(): Promise<DistributionMap | null> {
   const caps = createCapabilities(loadConfig(process.env as Record<string, string | undefined>));
-  // Build up to twice: never CACHE a snapshot where compliance degraded to insufficient-data (a
-  // transient Etherscan failure) — that's exactly what made the landing disagree with the live app.
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const map = await caps.buildDistributionMap(PREVIEW_SYMBOL);
-      const comp = map.subScores.find((s) => s.id === "compliance");
-      if (comp?.status !== "insufficient-data" || attempt === 1) return map;
-    } catch {
-      if (attempt === 1) return null; // never fabricate — render the honest "unavailable" shell
+  // Bound the whole preview so a slow upstream (GeckoTerminal / Etherscan) degrades to the honest
+  // "unavailable" shell instead of hanging the static build.
+  const deadline = new Promise<null>((resolve) => setTimeout(() => resolve(null), 30_000));
+  const build = (async () => {
+    // Build up to twice: never CACHE a snapshot where compliance degraded to insufficient-data (a
+    // transient Etherscan failure) — that's what made the landing disagree with the live app.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const map = await caps.buildDistributionMap(PREVIEW_SYMBOL);
+        const comp = map.subScores.find((s) => s.id === "compliance");
+        if (comp?.status !== "insufficient-data" || attempt === 1) return map;
+      } catch {
+        if (attempt === 1) return null; // never fabricate — render the honest "unavailable" shell
+      }
     }
-  }
-  return null;
+    return null;
+  })();
+  return Promise.race([build, deadline]);
 }
 
 export default async function LandingPage() {

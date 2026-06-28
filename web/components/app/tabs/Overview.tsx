@@ -108,10 +108,12 @@ function DeepDiveBlock({
   const [step, setStep] = useState<DeepDiveStep>("idle");
   const [err, setErr] = useState<string | null>(null);
 
+  // The PREMIUM deep-dive (x402) goes beyond the free answer: a full $1M-exit playbook + cross-asset
+  // comparison to the other tracked Mantle RWAs, with a ranked venue/route/borrow plan.
   const query =
-    map.asset.symbol === "MI4"
-      ? "I hold $1M of MI4 — where can I exit it, what can I borrow against it, and am I gated?"
-      : `Map the distribution of ${map.asset.symbol} on Mantle: trading venues, liquidity depth, borrowability, cross-chain reach, and compliance.`;
+    `Deep-dive on ${map.asset.symbol}: I hold $1M — give me a ranked exit playbook (best venues by ` +
+    `liquidity/slippage, borrow options, cross-chain routes, and compliance gating), and compare ${map.asset.symbol}'s ` +
+    `distribution against the other tracked Mantle RWAs (MI4, mETH, cmETH, fBTC, USDe, USDY).`;
 
   async function run() {
     setErr(null);
@@ -146,8 +148,9 @@ function DeepDiveBlock({
         <div>
           <div className="font-mono text-[11px] tracking-[0.08em] text-mut">AI DEEP-DIVE · x402 PREMIUM</div>
           <p className="m-0 mt-1 max-w-[560px] font-mono text-[10px] leading-[1.6] text-mut2">
-            Above is free. The full natural-language analysis is the paid tier: 0.01 tmUSD on Mantle
-            Sepolia — a <span className="text-mut">testnet</span> token, minted free, gasless (you only sign). Real x402 settlement.
+            The agent's answer above is <span className="text-mut">free</span>. This premium deep-dive adds a ranked $1M-exit
+            playbook + cross-asset comparison — 0.01 tmUSD on Mantle Sepolia (a <span className="text-mut">testnet</span> token, minted
+            free, gasless: you only sign). Real x402 settlement.
           </p>
         </div>
         <button

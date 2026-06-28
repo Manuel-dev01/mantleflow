@@ -45,17 +45,20 @@ export function LiquidityTab({ map }: { map: DistributionMap }) {
               return (
                 <div
                   key={v.venue + i}
-                  className="grid grid-cols-[150px_1fr_84px_70px] items-center gap-3 border-b-2 border-line py-3.5 md:grid-cols-[180px_1fr_100px_80px] md:gap-4"
+                  className="grid grid-cols-[150px_1fr_80px_72px_64px] items-center gap-2.5 border-b-2 border-line py-3.5 md:grid-cols-[200px_1fr_96px_84px_72px] md:gap-3.5"
                 >
                   <div className="flex items-center gap-2 truncate">
                     <span className="h-2.5 w-2.5 shrink-0" style={{ background: color }} />
-                    <span className="truncate text-sm font-semibold">{v.venue}</span>
+                    <span className="truncate text-sm font-semibold" title={v.venue}>{v.venue}</span>
                   </div>
                   <div className="h-3 border-2 border-line">
                     <div className="h-full" style={{ width: `${share}%`, background: color }} />
                   </div>
                   <span className="flex items-center justify-end gap-1 text-right font-mono text-xs">
                     {fmtUsd(v.liquidityUsd)} <SourceTag receipt={v.receipt} label="" />
+                  </span>
+                  <span className="text-right font-mono text-xs text-mut">
+                    {v.volume24hUsd != null ? fmtUsd(v.volume24hUsd) : "—"}
                   </span>
                   <span
                     className={`text-right font-mono text-xs ${
@@ -68,15 +71,17 @@ export function LiquidityTab({ map }: { map: DistributionMap }) {
               );
             })}
           </div>
-          <div className="mt-3 grid grid-cols-[150px_1fr_84px_70px] gap-3 font-mono text-[10px] text-mut2 md:grid-cols-[180px_1fr_100px_80px] md:gap-4">
-            <span>VENUE</span>
+          <div className="mt-3 grid grid-cols-[150px_1fr_80px_72px_64px] gap-2.5 font-mono text-[10px] text-mut2 md:grid-cols-[200px_1fr_96px_84px_72px] md:gap-3.5">
+            <span>VENUE · DEX</span>
             <span>SHARE</span>
             <span className="text-right">LIQUIDITY</span>
+            <span className="text-right">24H VOL</span>
             <span className="text-right">SLIP/250K</span>
           </div>
-          <p className="mt-4 font-mono text-[10px] text-mut2">
-            “SLIP/250K” is exact constant-product price impact on CPMM pairs; TVL-proxy venues (v3 /
-            Liquidity Book) show “—” rather than an unsourced slippage.
+          <p className="mt-4 font-mono text-[10px] leading-[1.6] text-mut2">
+            Venues + liquidity + 24h volume from GeckoTerminal (all Mantle DEXs). “SLIP/250K” is a
+            constant-product estimate from pool reserves (exact on-chain reserves where available);
+            TVL-proxy venues show “—”.
           </p>
         </>
       )}

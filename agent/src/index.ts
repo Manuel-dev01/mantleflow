@@ -15,6 +15,13 @@ export { assembleDistributionMap } from "./engine/engine.js";
 export { detectGatesFromFunctions, checkComplianceGate } from "./modules/compliance.js";
 export { findSecondaryVenues, type ReachabilityResult } from "./dex/reachability.js";
 export { analyzeLiquidity, type VenueLiquidity, type LiquidityResult } from "./dex/depth.js";
+export {
+  createGeckoTerminalAdapter,
+  type GeckoTerminalAdapter,
+  type GtPool,
+  type GtPoolsResult,
+  type GtTokenMarket,
+} from "./adapters/geckoterminal.js";
 export { cpmmSlippagePct, STANDARD_CLEAR_SIZE_USD } from "./dex/slippage.js";
 export {
   findCrossChainRoutes,

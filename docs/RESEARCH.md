@@ -53,19 +53,20 @@ cannot source**, and never emits a composite without showing its parts (`agent/s
 
 ### How the math actually works (no hand-waving)
 
-- **Reachability** (`engine.ts:17`, **D24**): `0` if no genuine *trading* venue is found; otherwise
-  `min(100, 25 + 25·swap-venues)`. Venues are classified swap-vs-yield via DefiLlama's `exposure`
-  field (`multi` = a 2-sided AMM pool = tradeable; `single` = a single-asset deposit = yield/vault,
-  which you cannot sell into) plus on-chain `getPair` pairs (always swap). Only swap venues count;
-  yield/vault positions are surfaced separately. A zero is a *finding*, scoped to the probed venues.
-- **Liquidity depth** (`subscores/depth.ts`): for Uniswap-v2-style pairs (Merchant Moe classic) we
-  read on-chain reserves and compute the **exact** USD tradeable within ±2% of mid via the
-  constant-product invariant. For v3 / Liquidity-Book venues, where we don't hold tick-level
-  liquidity, we use DefiLlama pool TVL as a **clearly-labelled proxy** — we never present a TVL
-  proxy as a ±2% depth (decision **D11**).
-- **Per-$250k clearing slippage** (`dex/slippage.ts`, **D15**): exact constant-product price impact
-  for a $250k exit, computed *only* for CPMM venues whose reserves we hold; proxy venues report
-  `null` and the UI shows "—" rather than an unsourced number.
+- **Reachability** (`engine.ts:17`, **D24/D27**): `0` if no genuine *trading* venue is found; otherwise
+  `min(100, 25 + 25·swap-venues)`. Venues come from **GeckoTerminal**, which indexes every Mantle DEX
+  (Agni, Merchant Moe classic + Liquidity Book, FusionX, …), plus on-chain `getPair` for exact
+  corroboration; DefiLlama single-asset (`exposure=single`) positions are surfaced as **yield**, not
+  counted. Only swap venues count toward reachability. A zero is a *finding* — and because we now check
+  comprehensively, a "no venue" result (MI4) is genuine, not a coverage gap. If the DEX index can't be
+  reached, reachability is **insufficient-data**, never a false zero.
+- **Liquidity depth** (`subscores/depth.ts`, **D27**): on-chain Merchant Moe v2 pairs give **exact**
+  reserves; GeckoTerminal pools give `reserve_in_usd`, from which the ±2% depth and $250k slippage are
+  a **CPMM estimate** (one side ≈ reserve/2) — clearly labelled `gt-estimate` / `kind:"estimate"`, never
+  presented as exact. 24h volume per venue is shown alongside liquidity.
+- **Per-$250k clearing slippage** (`dex/slippage.ts`, **D15/D27**): exact constant-product price impact
+  where we hold on-chain reserves; a labelled CPMM **estimate** from GeckoTerminal pool reserves
+  otherwise. Venues without reserve data report `null` → the UI shows "—" rather than an unsourced number.
 - **Fragmentation** (`subscores/fragmentation.ts`): HHI over per-venue USD liquidity shares. High =
   concentrated (one venue), low = fragmented (capital split, harder to exit size). Components shown.
 - **Borrowability** (`subscores/borrowability.ts`, **D10/D25**): Lendle (Aave-v2 fork) is the source;
@@ -124,8 +125,9 @@ asset in the live tool and drill into the sub-score receipts.
   compliance detector flagged a **transfer-agent allowlist** — gating functions present on the
   proxy-resolved implementation ABI (Etherscan V2, 2026-06-25). Transfers are restricted to
   permissioned wallets.
-- **Reachability: NONE.** No on-chain secondary venue exists — Merchant Moe factory `getPair` for
-  USDC / WMNT / USDT / WETH all return empty, and DefiLlama lists no Mantle pool (2026-06-25).
+- **Reachability: NONE.** No on-chain secondary venue exists — checked comprehensively across **all
+  Mantle DEXs** (GeckoTerminal: Agni, Merchant Moe classic + Liquidity Book, FusionX, …) plus on-chain
+  Merchant Moe `getPair`: **0 pools** (2026-06-27). No market price exists for MI4 anywhere.
 
 **The finding:** MI4 is a fully-issued, $1M-scale tokenized index whose *only* exit is issuer
 redemption, and whose holders are an allowlist. The "I hold $1M of MI4, where can I exit?" question —
@@ -133,32 +135,39 @@ the brief's one live example — has a concrete, source-backed answer: **you can
 market, and you couldn't have bought it without being allowlisted.** Composite **5/100**. That is the
 distribution thesis proven on a single asset.
 
-### 4.2 The systemic finding: *none* of the six has a genuine secondary trading venue on Mantle
-This is the headline result of the swap-vs-yield classification (decision **D24**). Across all six
-tracked assets, every venue that DefiLlama surfaces on Mantle is a **single-asset yield/lending/vault
-position** (`exposure = single`) — woofi-earn and circuit-protocol for mETH, aave-v3 for fBTC/USDe,
-Ondo's vault for USDY — not a 2-sided AMM pool you can sell into; and no on-chain Merchant Moe v2 pair
-exists for any of them. So, *scoped to the venues we probe* (Merchant Moe v2 + DefiLlama AMM pools),
-**reachability is 0 for all six**: these assets are issued and then **parked in yield**, not made
-liquid on a secondary market. Issuance is easy; distribution is not — measured, on-chain, asset by asset.
+### 4.2 Distribution varies enormously across the six — measured, on-chain
+With **GeckoTerminal** indexing every Mantle DEX (decision **D27** — our earlier single-DEX probe
+under-counted and falsely read "no venue"), the live picture is a spectrum, not a binary:
 
-### 4.3 The engine discriminates (it is not a broken detector)
-A zero everywhere would be worthless if the engine couldn't tell assets apart. It can, on the *other*
-axes — proof the reachability zeros are real signal, not a stuck probe:
+| Asset | DEX venues | Total liquidity | Composite | Reading |
+|-------|-----------|-----------------|-----------|---------|
+| **MI4** | **0** | $0 | 5 | permissioned RWA — no secondary market at all |
+| **USDY** | 20 | **~$5k** | 52 | listed widely but **dust** depth — a real finding |
+| **fBTC** | 16 | ~$1.4M | 57 | omnichain BTC, moderate liquidity |
+| **cmETH** | 20 | ~$1.9M | 66 | restaked ETH |
+| **mETH** | 20 | ~$4.3M | 69 | Mantle's flagship LST, deepest LST liquidity |
+| **USDe** | 20 | **~$17.5M** | 77 | the most liquid tracked asset |
+
+The headline isn't "nothing trades" — it's that **the same six 'tokenized assets' span from zero
+secondary market (MI4) to $17.5M of DEX liquidity (USDe), with USDY a striking middle case: listed on
+20 pools yet only ~$5k of real depth.** That spread *is* the distribution story — issuance is uniform,
+distribution is wildly uneven.
+
+### 4.3 The engine discriminates on every axis
+The composites (5 → 77) separate the assets cleanly because each sub-score is a real, independent signal:
+- **Reachability + liquidity** range from MI4 (0 venues / $0) to USDe (20 venues / $17.5M); per-venue
+  ±2% depth and $250k slippage are CPMM **estimates** from pool reserves (labelled, never presented as
+  exact).
 - **Compliance** resolves into three accurate tiers (decision **D26**, read from each contract's ABI):
   **GATED (permissioned)** only for MI4 (Securitize allowlist — you must be approved); **BLOCKABLE
   (restrictable)** for mETH & fBTC (account blocklist — `isBlocked`/`lockUser`), USDY (Ondo blocklist),
-  and cmETH (**sanctions screening** — `isSanctioned`/`sanctionsList`); and genuinely **OPEN** only for
-  USDe. The blocklist/sanctions controls on cmETH/mETH/USDY are real findings the prior binary detector
-  missed — and they're correctly distinguished from MI4's far stronger allowlist.
+  and cmETH (**sanctions screening** — `isSanctioned`/`sanctionsList`); genuinely **OPEN** only for USDe.
 - **Cross-chain** splits: **cmETH and USDe score 70** (live LayerZero OFT endpoint) vs insufficient-data
   for mETH / MI4 (no verified channel).
 - **Borrowability** splits: mETH is **listed on Lendle but FROZEN → 20** (not the ~91 its 82.5% LTV
-  would imply — decision **D25**, so the score agrees with the on-chain frozen flag) vs **0** for the
-  not-listed assets.
-- Net composites differ accordingly — MI4 **5**, USDY **18**, mETH/fBTC **25**, cmETH **33**, USDe
-  **41** — each labelled with exactly which sub-scores it includes (and suppressed entirely when fewer
-  than 3 compute, so an unread axis never produces a misleading hard "0").
+  would imply — decision **D25**) vs **0** for the not-listed assets.
+Each composite is labelled with exactly which sub-scores it includes, and suppressed entirely when
+fewer than 3 of 6 compute — an unread axis never produces a misleading hard "0".
 
 ### 4.4 Cross-chain: RWAs travel by LayerZero or not at all — never CCIP
 - **LayerZero V2 endpoint on Mantle** = `0x1a44076050125825900e736c501f859c50fE728c`, confirmed via

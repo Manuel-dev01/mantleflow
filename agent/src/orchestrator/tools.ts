@@ -28,7 +28,7 @@ export const TOOL_DEFS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "get_distribution_map",
       description:
-        "Compute the Distribution Score map for a tracked asset from live Mantle data: secondary-market reachability, liquidity depth (±2% of mid), fragmentation (HHI), borrowability (Lendle), and compliance gating are computed; cross-chain reach is not yet computed. Every datum carries a source receipt. This is the authoritative source — only state numbers it returns.",
+        "Compute the Distribution Score map for a tracked asset from live Mantle data: real DEX trading venues + liquidity + 24h volume (GeckoTerminal across all Mantle DEXs), liquidity depth (±2% of mid, estimated), fragmentation (HHI), borrowability (Lendle), cross-chain reach (LayerZero OFT / CCIP), compliance gating, and token market facts (price/market-cap/FDV/volume/supply). Every datum carries a source receipt. This is the authoritative source — only state numbers it returns.",
       parameters: {
         type: "object",
         properties: { symbol: { type: "string", description: "Asset symbol, e.g. MI4." } },
@@ -73,11 +73,24 @@ export async function runTool(
     case "get_distribution_map": {
       const map = await ctx.caps.buildDistributionMap(String(args.symbol ?? ""));
       ctx.collected.map = map;
-      // Compact projection for the model: keep sub-score findings + receipts so it can cite sources.
+      // Top trading venues (swap only) from the liquidity sub-score — so the model cites real names.
+      const liq = map.subScores.find((s) => s.id === "liquidity-depth");
+      const venues = (liq?.inputs ?? [])
+        .map((i) => i.value as { venue: string; venueType?: string; dex?: string; liquidityUsd?: number; volume24hUsd?: number; slipPctAt250k?: number | null; method?: string })
+        .filter((v) => v.venueType === "swap")
+        .slice(0, 8)
+        .map((v) => ({ venue: v.venue, dex: v.dex, liquidityUsd: v.liquidityUsd, volume24hUsd: v.volume24hUsd, slipPctAt250k: v.slipPctAt250k, method: v.method }));
+      const borrow = (map.subScores.find((s) => s.id === "borrowability")?.inputs?.[0]?.value ?? null) as Record<string, unknown> | null;
       return JSON.stringify({
         asset: map.asset,
+        facts: map.facts
+          ? { priceUsd: map.facts.priceUsd, marketCapUsd: map.facts.marketCapUsd, fdvUsd: map.facts.fdvUsd, volume24hUsd: map.facts.volume24hUsd, totalSupply: map.facts.totalSupply }
+          : null,
         headlines: map.headlines,
         composite: map.composite,
+        compositeNote: map.compositeNote,
+        tradingVenues: venues, // real DEX pools (GeckoTerminal); empty = genuinely no on-chain venue
+        borrowability: borrow,
         subScores: map.subScores.map((s) => ({
           id: s.id,
           status: s.status,

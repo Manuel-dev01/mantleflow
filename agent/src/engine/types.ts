@@ -32,6 +32,19 @@ export interface SubScore {
   inputs: Sourced<unknown>[];
 }
 
+/** Basic token market facts — shown per asset so even illiquid assets surface real context
+ * (price/mcap/FDV/24h volume from GeckoTerminal; total supply from the token contract). */
+export interface AssetMarketFacts {
+  priceUsd: number | null;
+  marketCapUsd: number | null;
+  fdvUsd: number | null;
+  volume24hUsd: number | null;
+  /** Stringified to keep bigint out of the web-consumed type; null if unread. */
+  totalSupply: string | null;
+  decimals: number | null;
+  receipts: SourceReceipt[];
+}
+
 export interface DistributionMap {
   asset: {
     symbol: string;
@@ -39,6 +52,8 @@ export interface DistributionMap {
     address: string;
     network: "mainnet" | "sepolia";
   };
+  /** Token market facts (price / mcap / FDV / 24h volume / supply), when sourced. */
+  facts?: AssetMarketFacts | undefined;
   subScores: SubScore[];
   /** Composite 0..100 (weighted mean over computed sub-scores), or null when none computed. */
   composite: number | null;
@@ -71,6 +86,10 @@ export interface SecondaryVenue {
   venueType: "swap" | "yield";
   /** Why it was classified swap vs yield (e.g. "exposure=single — yield/lending"). */
   classification?: string;
+  /** Friendly DEX name (e.g. "Agni", "Merchant Moe (LB)") when known. */
+  dex?: string | undefined;
+  /** 24h trade volume in USD (from GeckoTerminal) when known. */
+  volume24hUsd?: number | undefined;
   pairAddress?: string;
   receipt: SourceReceipt;
 }

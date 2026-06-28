@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { DistributionMap } from "@mantleflow/agent";
-import { getMap } from "../../lib/api";
+import { getMap, runQuery } from "../../lib/api";
 import { ASSETS } from "../../lib/assets";
 import { AskHome } from "../../components/app/AskHome";
 import { Workspace, type TabId } from "../../components/app/Workspace";
@@ -35,10 +35,13 @@ export default function AppPage() {
     setQuery(exampleFor(sym));
   }
 
-  // RUN loads the asset's distribution map for FREE (no LLM). The natural-language AI deep-dive is
-  // the x402-paid premium action inside the Overview tab. Resolve the asset from the query or chip.
+  // RUN actually answers the question: the FREE basic LLM query returns a real NL answer + the
+  // distribution map (one call). The deeper cross-asset "AI deep-dive" stays the x402-paid premium in
+  // the Overview tab. If the query names no asset, pass the selected one as context for the LLM.
   async function run(q: string) {
-    const sym = ASSETS.find((s) => q.toLowerCase().includes(s.toLowerCase())) ?? asset;
+    const named = ASSETS.find((s) => q.toLowerCase().includes(s.toLowerCase()));
+    const sym = named ?? asset;
+    const effectiveQ = named ? q : `${q} (asset: ${sym})`;
     setLoading(true);
     setError(null);
     setView("workspace");
@@ -47,9 +50,17 @@ export default function AppPage() {
     setAsset(sym);
     setRecent((r) => [{ q, t: "now" }, ...r].slice(0, 4));
     try {
-      const res = await getMap(sym);
+      const res = await runQuery(effectiveQ);
       if (res.error) setError(res.error);
-      setMap(res.map ?? null);
+      setAnswer(res.answer ?? null);
+      // The orchestrator returns the map when it calls the map tool; guarantee tab data either way.
+      let m = res.map ?? null;
+      if (!m) {
+        const mr = await getMap(sym);
+        m = mr.map ?? null;
+        if (mr.error && !res.error) setError(mr.error);
+      }
+      setMap(m);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

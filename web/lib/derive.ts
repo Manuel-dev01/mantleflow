@@ -22,6 +22,11 @@ export function subOf(map: DistributionMap, id: SubScoreId): SubScore | undefine
   return map.subScores.find((s) => s.id === id);
 }
 
+/** Token market facts (price/mcap/FDV/24h volume/supply) for the facts strip, or null. */
+export function factsOf(map: DistributionMap): DistributionMap["facts"] | null {
+  return map.facts ?? null;
+}
+
 /** Secondary venues from the reachability sub-score (each input value is a SecondaryVenue). */
 export function venuesOf(map: DistributionMap): SecondaryVenue[] {
   return (subOf(map, "reachability")?.inputs ?? []).map((i) => i.value as SecondaryVenue);

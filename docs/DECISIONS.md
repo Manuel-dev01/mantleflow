@@ -244,3 +244,42 @@ borrowability sub-score returns a low value (**20**) and an explanation that lea
    freely transferable until halted; flagging it over-reports). Live result: MI4 = GATED (allowlist);
    mETH/fBTC/USDY = BLOCKABLE (blocklist); cmETH = BLOCKABLE (sanctions); USDe = OPEN — a far more
    accurate, defensible picture than the prior binary.
+
+### D27 — GeckoTerminal is the primary DEX venue + market-facts source
+**Date:** 2026-06-27. **Status:** locked.
+Probing only Merchant Moe **classic v2 `getPair`** + DefiLlama *yields* missed the real liquidity on
+Agni, Merchant Moe **Liquidity Book**, FusionX, Cleopatra, iZiSwap, etc. — so liquid assets falsely
+read "0 trading venues", which is BOTH an empty UX and a false "no-venue" claim (a coverage gap dressed
+as a finding). Fix: **GeckoTerminal** (`api.geckoterminal.com`, keyless) is now the primary swap-venue +
+liquidity source (`agent/src/adapters/geckoterminal.ts`): `poolsForToken` (real pools across all Mantle
+DEXs — `reserve_in_usd`, 24h volume, dex id, pool address) and `tokenMarket` (price/mcap/FDV/volume).
+On-chain Merchant Moe v2 stays as a corroborating *exact* source (deduped by pool address); DefiLlama is
+kept only for **yield** positions (swap pools would double-count). Per-pool ±2% depth and $250k slippage
+are a **CPMM estimate** from `reserve_in_usd` (`method:"gt-estimate"`, receipt `kind:"estimate"` —
+never presented as exact). Reliability/accuracy: GeckoTerminal is rate-limited (~30/min); a failed call
+**must not be read as "0 venues"** — `poolsForToken` retries hard then THROWS, reachability tracks
+`gtSourced`, and when the index is unreachable + nothing on-chain the reachability sub-score reports
+**insufficient-data**, never a false absence. Token market facts now show on every tab
+(`DistributionMap.facts`), surfacing real context even for venue-less assets.
+
+### D28 — Free basic LLM answer; x402 gates only the premium deep-dive
+**Date:** 2026-06-27. **Status:** locked.
+The "research agent" never actually answered free questions: `/app run()` called `/api/map` (no LLM)
+and showed templated `headlines`; the LLM (`runQuery`) ran ONLY via `/api/query`, which was **entirely
+x402-gated** — so a typed question yielded a preconfigured answer. The brief intends *free = basic
+lookup, paid = deep distribution map*; we'd inverted it. Fix: `/api/query` gates on **`body.deep ===
+true`** only. A basic question (no deep flag) runs `runQuery` **free** and returns `{answer, map}`;
+`run()` calls it and renders the agent's real answer. The Overview "AI deep-dive" is the **x402
+premium** (a ranked $1M-exit playbook + cross-asset comparison) via `payAndRunQuery({deep:true})`. When
+x402 is disabled even the deep-dive is free, so `main` stays deployable; the x402 demo (non-negotiable
+#4) is preserved on the premium tier. The orchestrator tools/prompt were extended to cite the real
+venues/liquidity/24h-volume/market-facts/borrowability and the honest no-venue findings.
+
+### D29 — Borrowability stays Lendle-only (Aave-v3 / INIT deferred — no verified address)
+**Date:** 2026-06-27. **Status:** locked.
+Owner asked to broaden lending to Aave-v3 + INIT. **Aave V3 is not in the official Aave address book for
+Mantle** (web search 2026-06-27 lists Ethereum/Optimism/Arbitrum, not Mantle); the DefiLlama "aave-v3"
+label on Mantle is not a verifiable PoolDataProvider address. Per prime directive #2 (never scaffold
+against an unverified primitive — a guessed address is a losing-grade defect), borrowability **stays
+Lendle-only** and Aave-v3/INIT are deferred until an address can be confirmed on-chain. The D25 frozen
+handling is unchanged.

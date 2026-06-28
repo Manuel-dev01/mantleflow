@@ -17,6 +17,18 @@ import { crossChainSubScore } from "./subscores/crosschain.js";
 function reachabilitySubScore(r: ReachabilityResult): SubScore {
   // Keep ALL venues in inputs (drillable); score over genuine TRADING venues only.
   const inputs: Sourced<unknown>[] = r.venues.map((v) => ({ value: v, receipt: v.receipt }));
+  // GeckoTerminal (the DEX index) was unreachable AND on-chain found nothing → we can't claim a value
+  // or an absence. Report insufficient-data, never a false "no venue" (a rate-limit must not score 0).
+  if (r.swapVenues.length === 0 && !r.gtSourced) {
+    return {
+      id: "reachability",
+      label: "Secondary-market reachability",
+      status: "insufficient-data",
+      value: null,
+      explanation: "Could not reach the DEX index (GeckoTerminal) this run — reachability not scored. We never report 'no venue' from a failed read.",
+      inputs,
+    };
+  }
   const yieldNote =
     r.yieldVenues.length > 0
       ? ` ${r.yieldVenues.length} yield/vault position(s) exist (${r.yieldVenues.map((v) => v.venue).join(", ")}) but are not exit liquidity — you cannot sell into a single-asset deposit.`
@@ -27,8 +39,8 @@ function reachabilitySubScore(r: ReachabilityResult): SubScore {
     status: "computed",
     value: r.noSecondaryMarket ? 0 : Math.min(100, 25 + r.swapVenues.length * 25),
     explanation: r.noSecondaryMarket
-      ? `No genuine secondary trading venue found via probed venues (Merchant Moe v2 factories + DefiLlama AMM pools).${yieldNote} Exit is via issuer redemption, not the open market — a core distribution friction.`
-      : `Found ${r.swapVenues.length} trading venue(s): ${r.swapVenues.map((v) => v.venue).join(", ")}.${yieldNote}`,
+      ? `No on-chain secondary trading venue found across all Mantle DEXs (Merchant Moe v2 + GeckoTerminal index of every Mantle DEX).${yieldNote} Exit is via issuer redemption, not the open market — a core distribution friction.`
+      : `Found ${r.swapVenues.length} trading venue(s): ${r.swapVenues.slice(0, 6).map((v) => v.venue).join(", ")}${r.swapVenues.length > 6 ? ", …" : ""}.${yieldNote}`,
     inputs,
   };
 }
@@ -134,6 +146,8 @@ function composite(subScores: SubScore[]): Composite {
 
 export interface AssembleInput {
   asset: DistributionMap["asset"];
+  /** Token market facts (price/mcap/FDV/24h volume/supply), when sourced. */
+  facts?: DistributionMap["facts"];
   reachability: ReachabilityResult;
   liquidity: LiquidityResult;
   borrow: Sourced<LendleReserve>;
@@ -174,6 +188,7 @@ export function assembleDistributionMap(input: AssembleInput): DistributionMap {
 
   return {
     asset: input.asset,
+    ...(input.facts ? { facts: input.facts } : {}),
     subScores,
     composite: comp.value,
     compositeNote: comp.note,

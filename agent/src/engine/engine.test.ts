@@ -35,7 +35,7 @@ describe("assembleDistributionMap", () => {
   it("MI4-like: no venue + gated + not borrowable → low composite, headline findings", () => {
     const input: AssembleInput = {
       asset,
-      reachability: { venues: [], swapVenues: [], yieldVenues: [], noSecondaryMarket: true },
+      reachability: { venues: [], swapVenues: [], yieldVenues: [], noSecondaryMarket: true, gtSourced: true },
       liquidity: emptyLiquidity,
       borrow: notListed(),
       compliance: {
@@ -65,7 +65,7 @@ describe("assembleDistributionMap", () => {
   it("undetermined compliance → insufficient-data, never a false 'freely transferable'", () => {
     const map = assembleDistributionMap({
       asset,
-      reachability: { venues: [], swapVenues: [], yieldVenues: [], noSecondaryMarket: true },
+      reachability: { venues: [], swapVenues: [], yieldVenues: [], noSecondaryMarket: true, gtSourced: true },
       liquidity: emptyLiquidity,
       borrow: notListed(),
       compliance: { value: { determined: false, isGated: false, tier: null, mechanism: null, evidence: [] }, receipt: rcpt },
@@ -100,6 +100,7 @@ describe("assembleDistributionMap", () => {
         swapVenues: reachV,
         yieldVenues: [],
         noSecondaryMarket: false,
+        gtSourced: true,
       },
       liquidity,
       borrow: {
