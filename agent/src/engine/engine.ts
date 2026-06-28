@@ -46,14 +46,21 @@ function complianceSubScore(g: Sourced<ComplianceGate>): SubScore {
       inputs: [{ value: { determined: false }, receipt: g.receipt }],
     };
   }
+  // Three tiers: permissioned (must be approved — strong gate), restrictable (freely held unless
+  // blocked/sanctioned — a milder, standard control), or open. Scored 15 / 60 / 90.
+  const value = gate.tier === "permissioned" ? 15 : gate.tier === "restrictable" ? 60 : 90;
+  const explanation =
+    gate.tier === "permissioned"
+      ? `Holder is gated: ${gate.mechanism}. Transfers are restricted to approved wallets — most of the world is gated out, constraining distribution regardless of venue liquidity.`
+      : gate.tier === "restrictable"
+        ? `Freely transferable, but the issuer can block/freeze/sanction specific accounts (${gate.mechanism}). Normal holders are unaffected — a real but milder distribution control than an allowlist.`
+        : "No allowlist / blocklist / transfer-agent / sanctions hooks detected; the token is freely transferable.";
   return {
     id: "compliance",
     label: "Compliance gating",
     status: "computed",
-    value: gate.isGated ? 15 : 90,
-    explanation: gate.isGated
-      ? `Holder is gated: ${gate.mechanism}. Transfers are restricted to permissioned wallets — this constrains distribution regardless of venue liquidity.`
-      : "No transfer-restriction / allowlist / transfer-agent hooks detected; the token is freely transferable.",
+    value,
+    explanation,
     inputs: gate.evidence as Sourced<unknown>[],
   };
 }
@@ -80,6 +87,10 @@ const WEIGHTS: Partial<Record<SubScoreId, number>> = {
   "cross-chain": 0.15,
 };
 
+/** Minimum computed sub-scores (of 6) before we emit a composite number — below this a single
+ * unreadable axis (e.g. compliance) would skew a hard score, so we show "—" + the note instead. */
+const MIN_COMPOSITE_SUBSCORES = 3;
+
 interface Composite {
   value: number | null;
   included: SubScoreId[];
@@ -99,9 +110,18 @@ function composite(subScores: SubScore[]): Composite {
       included.push(s.id);
     }
   }
-  if (weightSum === 0) return { value: null, included, note: "no sub-scores computed" };
   const all: SubScoreId[] = ["reachability", "liquidity-depth", "fragmentation", "borrowability", "compliance", "cross-chain"];
   const excluded = all.filter((id) => !included.includes(id));
+  if (weightSum === 0) return { value: null, included, note: "no sub-scores computed" };
+  // A composite over too few axes is misleadingly precise (e.g. reachability 0 + borrowability 0 with
+  // compliance unread reads as a hard "0/100" when compliance might be 90). Require at least 3 of 6.
+  if (included.length < MIN_COMPOSITE_SUBSCORES) {
+    return {
+      value: null,
+      included,
+      note: `insufficient sub-scores for a composite — only ${included.length}/6 computed (${included.join(", ")}); not scored: ${excluded.join(", ")}`,
+    };
+  }
   return {
     value: Math.round(weighted / weightSum),
     included,
@@ -142,10 +162,11 @@ export function assembleDistributionMap(input: AssembleInput): DistributionMap {
 
   const gate = input.compliance.value;
   const headlines: string[] = [];
-  if (gate.determined && gate.isGated) headlines.push(`Holder gated by ${gate.mechanism}`);
+  if (gate.determined && gate.tier === "permissioned") headlines.push(`Holder gated by ${gate.mechanism}`);
+  else if (gate.determined && gate.tier === "restrictable") headlines.push(`Transferable, but blockable: ${gate.mechanism}`);
   if (input.reachability.noSecondaryMarket) headlines.push("No on-chain secondary trading venue found");
   if (!input.borrow.value.listed) headlines.push("Not borrowable on Lendle");
-  if (headlines.length === 0 && gate.determined && !gate.isGated && !input.reachability.noSecondaryMarket)
+  if (headlines.length === 0 && gate.determined && gate.tier === null && !input.reachability.noSecondaryMarket)
     headlines.push("Freely transferable with a live trading venue");
   if (headlines.length === 0 && !input.reachability.noSecondaryMarket)
     headlines.push("Has a live trading venue"); // compliance undetermined — don't assert transferability

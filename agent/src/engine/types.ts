@@ -51,10 +51,13 @@ export interface DistributionMap {
 
 /** A detected compliance/transfer-restriction gate on a token. */
 export interface ComplianceGate {
-  /** False when the check could not run (e.g. Etherscan unavailable) — then isGated is meaningless. */
+  /** False when the check could not run (e.g. Etherscan unavailable) — then the rest is meaningless. */
   determined: boolean;
+  /** True only for a PERMISSIONED gate (allowlist / transfer-agent — must be approved to hold). */
   isGated: boolean;
-  /** e.g. "Securitize DS-Token transfer-agent allowlist", "ERC-1404 transfer restriction". */
+  /** "permissioned" = approve-to-hold; "restrictable" = freely held unless blocked/sanctioned; null = open. */
+  tier: "permissioned" | "restrictable" | null;
+  /** e.g. "Securitize DS-Token transfer-agent allowlist", "Account blocklist / freeze". */
   mechanism: string | null;
   evidence: Sourced<string>[];
 }

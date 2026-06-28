@@ -69,7 +69,10 @@ export function borrowOf(map: DistributionMap): { value: BorrowSummary; receipt:
 export interface ComplianceView {
   status: SubScoreStatus;
   determined: boolean;
-  /** true = gated, false = open, null = could not source-verify */
+  /** "permissioned" = approve-to-hold (strong gate); "restrictable" = freely held unless blocked/
+   * sanctioned; "open" = no restriction; null = could not source-verify. */
+  tier: "permissioned" | "restrictable" | "open" | null;
+  /** true only for a permissioned gate (back-compat); false for restrictable/open; null unverified. */
   isGated: boolean | null;
   mechanism: string | null;
   explanation: string;
@@ -80,15 +83,23 @@ export function complianceOf(map: DistributionMap): ComplianceView | null {
   const s = subOf(map, "compliance");
   if (!s) return null;
   const determined = s.status !== "insufficient-data";
-  const isGated = s.value == null ? null : s.value <= 50;
-  const m = s.explanation.match(/gated:\s*([^.]+)\./);
+  // Tier from the sub-score value bands (15 permissioned / 60 restrictable / 90 open).
+  const tier: ComplianceView["tier"] =
+    !determined || s.value == null ? null : s.value <= 20 ? "permissioned" : s.value <= 75 ? "restrictable" : "open";
+  const evidence = (s.inputs as Sourced<unknown>[]).map((i) => i as Sourced<string>);
+  // Mechanism from the "Detected: <mechanism> (<tier>)" evidence line (falls back to the explanation).
+  const detected = evidence.map((e) => String(e.value)).find((v) => /Detected: .+ \((permissioned|restrictable)\)/.test(v));
+  const mechanism = detected
+    ? detected.replace(/^Detected:\s*/, "").replace(/\s*\((permissioned|restrictable)\)\s*$/, "")
+    : (s.explanation.match(/gated:\s*([^.]+)\./)?.[1]?.trim() ?? null);
   return {
     status: s.status,
     determined,
-    isGated,
-    mechanism: m?.[1]?.trim() ?? null,
+    tier,
+    isGated: tier == null ? null : tier === "permissioned",
+    mechanism,
     explanation: s.explanation,
-    evidence: (s.inputs as Sourced<unknown>[]).map((i) => i as Sourced<string>),
+    evidence,
   };
 }
 
@@ -131,11 +142,13 @@ export function overviewStats(map: DistributionMap): OverviewStats {
   const bestSlipVenue = liq.find((v) => v.slipPctAt250k != null && v.slipPctAt250k === bestSlip);
 
   const holding: Stat =
-    comp == null || comp.isGated == null
+    comp == null || comp.tier == null
       ? { value: "UNVERIFIED", tone: "mut", receipt: comp?.evidence[0]?.receipt }
-      : comp.isGated
+      : comp.tier === "permissioned"
         ? { value: "GATED", tone: "paper", receipt: comp.evidence[0]?.receipt }
-        : { value: "OPEN", tone: "acid", receipt: comp.evidence[0]?.receipt };
+        : comp.tier === "restrictable"
+          ? { value: "BLOCKABLE", tone: "paper", receipt: comp.evidence[0]?.receipt }
+          : { value: "OPEN", tone: "acid", receipt: comp.evidence[0]?.receipt };
 
   return {
     venues: {
@@ -231,10 +244,10 @@ export function buildMapNodes(map: DistributionMap): MapNode[] {
   }
 
   const comp = complianceOf(map);
-  if (comp?.isGated) {
+  if (comp && (comp.tier === "permissioned" || comp.tier === "restrictable")) {
     nodes.push({
-      label: comp.mechanism ? comp.mechanism.split(" ").slice(0, 2).join(" ") : "Gated",
-      meta: "GATED",
+      label: comp.mechanism ? comp.mechanism.split(/[ /]/).slice(0, 2).join(" ") : comp.tier === "permissioned" ? "Gated" : "Blockable",
+      meta: comp.tier === "permissioned" ? "GATED" : "BLOCKABLE",
       status: "gated",
       x: 0,
       y: 0,

@@ -45,7 +45,7 @@ export function createCapabilities(config: AppConfig): Capabilities {
   // Used when compliance CANNOT be determined (no key, or Etherscan failed). `determined:false`
   // → the sub-score reports insufficient-data rather than a false "freely transferable".
   const UNKNOWN_GATE = (ts: string, why: string): Sourced<ComplianceGate> => ({
-    value: { determined: false, isGated: false, mechanism: null, evidence: [] },
+    value: { determined: false, isGated: false, tier: null, mechanism: null, evidence: [] },
     receipt: { sourceName: "n/a", url: "", observedAt: ts, kind: "assumption", note: why },
   });
 

@@ -48,12 +48,13 @@ A finding of *"no secondary market"* or *"holder is gated"* is a headline result
   on-chain (testnet tmUSD, gasless buyer via server faucet); gates `/api/query` only, all browsing
   free; QuestFlow facilitator + mainnet USDC pluggable via env.
 
-Headline findings (live): **MI4** is gated (Securitize DS-Token allowlist) with **no on-chain
+Headline findings (live): **MI4** is GATED (Securitize allowlist — must be approved) with **no on-chain
 secondary venue** — issued but undistributed; **none of the six tracked assets has a genuine secondary
 *trading* venue on Mantle** (they sit in yield/lending — measured by classifying AMM vs single-asset
-pools); **mETH** is freely transferable but its Lendle reserve is **FROZEN** (borrowability scored
-accordingly, not by raw LTV); **RWAs bridge by LayerZero OFT or not at all** (cmETH/USDe verified, none
-on Mantle's CCIP set); **syrupUSDT left Mantle** — distribution can regress. Full writeup:
+pools); compliance resolves into **three tiers** — MI4 gated, **mETH/cmETH/fBTC/USDY BLOCKABLE**
+(blocklist/sanctions controls, surfaced for the first time), only **USDe fully open**; **mETH**'s Lendle
+reserve is **FROZEN** (borrowability scored accordingly, not by raw LTV); **RWAs bridge by LayerZero OFT
+or not at all** (cmETH/USDe verified, none on Mantle's CCIP set); **syrupUSDT left Mantle**. Full writeup:
 [`docs/RESEARCH.md`](docs/RESEARCH.md) · checklist: [`docs/DEMO_CHECKLIST.md`](docs/DEMO_CHECKLIST.md).
 Fact ledger: [`docs/VERIFIED.md`](docs/VERIFIED.md) · decisions: [`docs/DECISIONS.md`](docs/DECISIONS.md).
 

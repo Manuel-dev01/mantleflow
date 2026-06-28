@@ -21,9 +21,14 @@ export function GatesTab({ map }: { map: DistributionMap }) {
     );
   }
 
-  const statusLabel =
-    !c.determined ? "INSUFFICIENT DATA" : c.isGated ? "GATED" : "FREELY TRANSFERABLE";
-  const statusTone = !c.determined ? "text-mut" : c.isGated ? "text-paper" : "text-acid";
+  const statusLabel = !c.determined
+    ? "INSUFFICIENT DATA"
+    : c.tier === "permissioned"
+      ? "GATED"
+      : c.tier === "restrictable"
+        ? "BLOCKABLE"
+        : "FREELY TRANSFERABLE";
+  const statusTone = !c.determined ? "text-mut" : c.tier === "open" ? "text-acid" : "text-paper";
 
   return (
     <div className="px-[34px] py-[30px]">

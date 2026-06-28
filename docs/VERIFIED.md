@@ -195,6 +195,18 @@ Remaining open items are tracked in §6 (non-blocking).
   returns **20** (was ~91 from LTV) so it no longer contradicts the on-chain frozen flag. (D25.)
 - **Live engine read (2026-06-27, post-fix):** MI4 → composite **5** (gated + no trading venue + not
   borrowable); mETH → composite **34** (reachability 0, borrowability 20 frozen, compliance 90 open).
+- **Compliance tiers (D26) — on-chain ABI reads, 2026-06-27.** Three tiers, not a binary:
+  permissioned (allowlist → score 15, "GATED"), restrictable (blocklist/sanctions → 60, "BLOCKABLE"),
+  open (90). Verified per asset (effective/impl ABI via Etherscan V2): **MI4** = GATED (Securitize
+  allowlist); **fBTC** = BLOCKABLE (`lockUser`/`userBlocked`); **mETH** = BLOCKABLE
+  (`isBlocked`/`getBlockLists`/`addBlockListContract`); **cmETH** = BLOCKABLE (`isSanctioned`/
+  `sanctionsList`/`blocklist`); **USDY** = BLOCKABLE (`blocklist`/`setBlocklist`); **USDe** = OPEN
+  (`allowance`-only, no hooks). Global `pause`/`unpause` is intentionally NOT counted as gating.
+  Post-fix composites: MI4 5, USDY 18, mETH 25, fBTC 25, cmETH 33, USDe 41.
+- **Etherscan reliability:** fBTC's getsourcecode (~88KB source) intermittently failed Node `fetch`;
+  the adapter now falls back to the lighter `getabi` (~10KB) so fBTC compliance resolves. The composite
+  is suppressed (shown "—") when < 3 of 6 sub-scores compute, so a transient unread axis never renders a
+  misleading hard "0/100".
 - **Dual-network capability** — ERC-8004 identity/provenance/reputation are network-selectable via
   `ERC8004_NETWORK` (independent of `x402Network`, which stays Sepolia). Mainnet registries (§3) are
   wired. **Code default `sepolia`** so the live deployment never breaks before the env is flipped.

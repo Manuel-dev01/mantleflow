@@ -77,10 +77,13 @@ cannot source**, and never emits a composite without showing its parts (`agent/s
   LayerZero OFT (on-chain `endpoint()` == LZ V2 endpoint) and Chainlink CCIP membership. When no
   channel is verified, the sub-score is **insufficient-data** and is *excluded from the composite* —
   never a false zero. Per-tx bridge fees are dynamic, so cost is reported "not quoted", never fabricated.
-- **Compliance** (`engine.ts:31`): `90` if no restriction hooks detected; `15` if gated, with the
-  detected mechanism named (e.g. "Securitize DS-Token transfer-agent allowlist"). If Etherscan is
-  unavailable, the sub-score is **insufficient-data** — we report neither gated nor ungated rather
-  than guess.
+- **Compliance** (`engine.ts:31`, **D26**): three tiers from the contract ABI — **permissioned**
+  (allowlist / transfer-agent / ERC-1404 — must be approved to hold → `15`, "GATED"), **restrictable**
+  (blocklist / sanctions / account-freeze — freely held unless an account is blocked → `60`,
+  "BLOCKABLE"), or **open** (no hooks → `90`). Global `pause` is not treated as holder gating. The
+  mechanism is named. If Etherscan is unavailable the sub-score is **insufficient-data** — neither
+  gated nor ungated. The composite is suppressed entirely when fewer than 3 of 6 sub-scores compute,
+  so an unread axis never yields a misleading hard "0".
 
 ### The composite is honest by construction
 
@@ -142,15 +145,20 @@ liquid on a secondary market. Issuance is easy; distribution is not — measured
 ### 4.3 The engine discriminates (it is not a broken detector)
 A zero everywhere would be worthless if the engine couldn't tell assets apart. It can, on the *other*
 axes — proof the reachability zeros are real signal, not a stuck probe:
-- **Compliance** splits cleanly: **GATED** for MI4 (Securitize allowlist) and USDY (Ondo blocklist
-  hook) vs **freely transferable** for mETH / fBTC / USDe.
+- **Compliance** resolves into three accurate tiers (decision **D26**, read from each contract's ABI):
+  **GATED (permissioned)** only for MI4 (Securitize allowlist — you must be approved); **BLOCKABLE
+  (restrictable)** for mETH & fBTC (account blocklist — `isBlocked`/`lockUser`), USDY (Ondo blocklist),
+  and cmETH (**sanctions screening** — `isSanctioned`/`sanctionsList`); and genuinely **OPEN** only for
+  USDe. The blocklist/sanctions controls on cmETH/mETH/USDY are real findings the prior binary detector
+  missed — and they're correctly distinguished from MI4's far stronger allowlist.
 - **Cross-chain** splits: **cmETH and USDe score 70** (live LayerZero OFT endpoint) vs insufficient-data
   for mETH / MI4 (no verified channel).
 - **Borrowability** splits: mETH is **listed on Lendle but FROZEN → 20** (not the ~91 its 82.5% LTV
   would imply — decision **D25**, so the score agrees with the on-chain frozen flag) vs **0** for the
   not-listed assets.
-- Net composites differ accordingly — MI4 **5**, mETH **34** — each labelled with exactly which
-  sub-scores it includes.
+- Net composites differ accordingly — MI4 **5**, USDY **18**, mETH/fBTC **25**, cmETH **33**, USDe
+  **41** — each labelled with exactly which sub-scores it includes (and suppressed entirely when fewer
+  than 3 compute, so an unread axis never produces a misleading hard "0").
 
 ### 4.4 Cross-chain: RWAs travel by LayerZero or not at all — never CCIP
 - **LayerZero V2 endpoint on Mantle** = `0x1a44076050125825900e736c501f859c50fE728c`, confirmed via

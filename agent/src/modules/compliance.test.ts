@@ -2,24 +2,37 @@ import { describe, it, expect } from "vitest";
 import { detectGatesFromFunctions } from "./compliance.js";
 
 describe("detectGatesFromFunctions", () => {
-  it("detects Securitize DS-Token gating from transfer-agent functions", () => {
-    const fns = ["transfer", "balanceOf", "preTransferCheck", "registryService"];
-    expect(detectGatesFromFunctions(fns)).toContain(
-      "Securitize DS-Token transfer-agent allowlist",
-    );
+  const mechs = (fns: string[]) => detectGatesFromFunctions(fns).map((g) => g.mechanism);
+
+  it("detects Securitize DS-Token gating as a PERMISSIONED tier", () => {
+    const g = detectGatesFromFunctions(["transfer", "balanceOf", "preTransferCheck", "registryService"]);
+    expect(g.some((x) => x.mechanism === "Securitize DS-Token transfer-agent allowlist" && x.tier === "permissioned")).toBe(true);
   });
 
-  it("detects ERC-1404 transfer restrictions", () => {
-    const fns = ["transfer", "detectTransferRestriction", "messageForTransferRestriction"];
-    expect(detectGatesFromFunctions(fns)).toContain("ERC-1404 transfer restriction");
+  it("detects ERC-1404 transfer restrictions (permissioned)", () => {
+    expect(mechs(["transfer", "detectTransferRestriction", "messageForTransferRestriction"])).toContain("ERC-1404 transfer restriction");
   });
 
   it("returns no gates for a plain ERC-20", () => {
-    const fns = ["transfer", "transferFrom", "approve", "balanceOf", "totalSupply"];
-    expect(detectGatesFromFunctions(fns)).toEqual([]);
+    expect(detectGatesFromFunctions(["transfer", "transferFrom", "approve", "balanceOf", "totalSupply"])).toEqual([]);
   });
 
-  it("detects allowlist gating", () => {
-    expect(detectGatesFromFunctions(["isWhitelisted"])).toContain("Allowlist / whitelist gating");
+  it("detects allowlist gating (permissioned)", () => {
+    expect(mechs(["isWhitelisted"])).toContain("Allowlist / whitelist / KYC gating");
+  });
+
+  it("detects per-account blocklist/freeze as RESTRICTABLE (fBTC lockUser/userBlocked, USDY blocklist)", () => {
+    const fbtc = detectGatesFromFunctions(["transfer", "lockUser", "userBlocked"]);
+    expect(fbtc.some((x) => x.mechanism === "Account blocklist / freeze" && x.tier === "restrictable")).toBe(true);
+    expect(mechs(["blocklist", "setBlocklist"])).toContain("Account blocklist / freeze");
+  });
+
+  it("detects sanctions screening as RESTRICTABLE (cmETH)", () => {
+    const g = detectGatesFromFunctions(["isSanctioned", "sanctionsList"]);
+    expect(g.some((x) => x.mechanism === "Sanctions screening" && x.tier === "restrictable")).toBe(true);
+  });
+
+  it("does NOT gate on global pause alone (a pausable token is not holder-gated)", () => {
+    expect(detectGatesFromFunctions(["transfer", "pause", "unpause", "paused"])).toEqual([]);
   });
 });

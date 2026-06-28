@@ -223,3 +223,24 @@ near-zero — yet the score previously ignored `isFrozen` and returned the LTV-d
 ~91 while its reserve was FROZEN, contradicting the Gates-tab warning). Fix: when `isFrozen`, the
 borrowability sub-score returns a low value (**20**) and an explanation that leads with "reserve FROZEN
 — supply/borrow halted". The score now agrees with the on-chain frozen flag the UI already surfaces.
+
+### D26 — Compliance: three tiers; composite guard; Etherscan getabi fallback
+**Date:** 2026-06-27. **Status:** locked. Triggered by an fBTC view showing composite **0** + HOLDING
+**UNVERIFIED** — three distinct defects, all fixed:
+1. **Etherscan reliability (getabi fallback).** fBTC's ~88KB verified source tripped Node's `fetch`
+   ("TypeError: fetch failed") while smaller responses (USDe/cmETH) succeeded, so compliance silently
+   degraded to insufficient-data. The adapter now falls back to **`action=getabi`** (~10× smaller, just
+   the ABI) when `getsourcecode` fails. A proxy whose impl can't be resolved in the fallback returns
+   insufficient-data (never false-clears gates living in the impl).
+2. **Composite guard (≥3 of 6).** A composite over too few axes is misleadingly precise — reachability 0
+   + borrowability 0 with compliance unread rendered as a hard "0/100" when compliance might be 90. The
+   engine now emits **no composite** (shows "—" + a note) when fewer than 3 sub-scores are computed.
+3. **Three compliance tiers, not a binary.** Inspecting the real ABIs showed the binary
+   gated/open model was wrong both ways: it MISSED blocklists/sanctions (cmETH `isSanctioned`/
+   `sanctionsList`, USDY/fBTC/mETH blocklists) and would have LUMPED them with MI4's allowlist. New
+   model: **permissioned** (allowlist / transfer-agent / ERC-1404 — must be approved to hold → 15,
+   "GATED"), **restrictable** (blocklist / sanctions / account-freeze — freely held unless blocked → 60,
+   "BLOCKABLE"), **open** (no hooks → 90). Global `pause`/`unpause` is NOT gating (a pausable token is
+   freely transferable until halted; flagging it over-reports). Live result: MI4 = GATED (allowlist);
+   mETH/fBTC/USDY = BLOCKABLE (blocklist); cmETH = BLOCKABLE (sanctions); USDe = OPEN — a far more
+   accurate, defensible picture than the prior binary.

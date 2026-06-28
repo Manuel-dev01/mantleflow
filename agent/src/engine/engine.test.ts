@@ -39,7 +39,7 @@ describe("assembleDistributionMap", () => {
       liquidity: emptyLiquidity,
       borrow: notListed(),
       compliance: {
-        value: { determined: true, isGated: true, mechanism: "Securitize DS-Token transfer-agent allowlist", evidence: [] },
+        value: { determined: true, isGated: true, tier: "permissioned", mechanism: "Securitize DS-Token transfer-agent allowlist", evidence: [] },
         receipt: rcpt,
       },
       generatedAt: ts,
@@ -68,13 +68,16 @@ describe("assembleDistributionMap", () => {
       reachability: { venues: [], swapVenues: [], yieldVenues: [], noSecondaryMarket: true },
       liquidity: emptyLiquidity,
       borrow: notListed(),
-      compliance: { value: { determined: false, isGated: false, mechanism: null, evidence: [] }, receipt: rcpt },
+      compliance: { value: { determined: false, isGated: false, tier: null, mechanism: null, evidence: [] }, receipt: rcpt },
       generatedAt: ts,
     });
     const c = map.subScores.find((s) => s.id === "compliance")!;
     expect(c.status).toBe("insufficient-data");
     expect(c.value).toBeNull();
     expect(map.headlines.join(" ")).not.toMatch(/freely transferable/i);
+    // Only reachability + borrowability computed (2/6) → no misleading hard composite (e.g. "0/100").
+    expect(map.composite).toBeNull();
+    expect(map.compositeNote).toMatch(/insufficient sub-scores/i);
   });
 
   it("liquid asset: venues + collateral → higher composite", () => {
@@ -103,7 +106,7 @@ describe("assembleDistributionMap", () => {
         value: { ...notListed().value, listed: true, usageAsCollateralEnabled: true, borrowingEnabled: true, ltvPct: 70, liquidationThresholdPct: 75, supplyAprPct: 2.1, variableBorrowAprPct: 3.4, utilizationPct: 40, reserveDecimals: 18 },
         receipt: rcpt,
       },
-      compliance: { value: { determined: true, isGated: false, mechanism: null, evidence: [] }, receipt: rcpt },
+      compliance: { value: { determined: true, isGated: false, tier: null, mechanism: null, evidence: [] }, receipt: rcpt },
       generatedAt: ts,
     };
     const map = assembleDistributionMap(input);
