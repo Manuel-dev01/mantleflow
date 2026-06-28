@@ -15,15 +15,20 @@ import { borrowabilitySubScore } from "./subscores/borrowability.js";
 import { crossChainSubScore } from "./subscores/crosschain.js";
 
 function reachabilitySubScore(r: ReachabilityResult): SubScore {
+  // Keep ALL venues in inputs (drillable); score over genuine TRADING venues only.
   const inputs: Sourced<unknown>[] = r.venues.map((v) => ({ value: v, receipt: v.receipt }));
+  const yieldNote =
+    r.yieldVenues.length > 0
+      ? ` ${r.yieldVenues.length} yield/vault position(s) exist (${r.yieldVenues.map((v) => v.venue).join(", ")}) but are not exit liquidity — you cannot sell into a single-asset deposit.`
+      : "";
   return {
     id: "reachability",
     label: "Secondary-market reachability",
     status: "computed",
-    value: r.noSecondaryMarket ? 0 : Math.min(100, 25 + r.venues.length * 25),
+    value: r.noSecondaryMarket ? 0 : Math.min(100, 25 + r.swapVenues.length * 25),
     explanation: r.noSecondaryMarket
-      ? "No live on-chain secondary venue found (checked Merchant Moe factories + DefiLlama pools). Exit is via issuer redemption, not the open market — a core distribution friction."
-      : `Found ${r.venues.length} secondary venue(s): ${r.venues.map((v) => v.venue).join(", ")}.`,
+      ? `No genuine secondary trading venue found via probed venues (Merchant Moe v2 factories + DefiLlama AMM pools).${yieldNote} Exit is via issuer redemption, not the open market — a core distribution friction.`
+      : `Found ${r.swapVenues.length} trading venue(s): ${r.swapVenues.map((v) => v.venue).join(", ")}.${yieldNote}`,
     inputs,
   };
 }
@@ -138,12 +143,12 @@ export function assembleDistributionMap(input: AssembleInput): DistributionMap {
   const gate = input.compliance.value;
   const headlines: string[] = [];
   if (gate.determined && gate.isGated) headlines.push(`Holder gated by ${gate.mechanism}`);
-  if (input.reachability.noSecondaryMarket) headlines.push("No on-chain secondary venue found");
+  if (input.reachability.noSecondaryMarket) headlines.push("No on-chain secondary trading venue found");
   if (!input.borrow.value.listed) headlines.push("Not borrowable on Lendle");
   if (headlines.length === 0 && gate.determined && !gate.isGated && !input.reachability.noSecondaryMarket)
-    headlines.push("Freely transferable with a live secondary venue");
+    headlines.push("Freely transferable with a live trading venue");
   if (headlines.length === 0 && !input.reachability.noSecondaryMarket)
-    headlines.push("Has a live secondary venue"); // compliance undetermined — don't assert transferability
+    headlines.push("Has a live trading venue"); // compliance undetermined — don't assert transferability
   if (headlines.length === 0) headlines.push("Distribution analysis complete");
 
   return {

@@ -40,24 +40,36 @@ export function explorerBaseFor(network: MantleNetwork): string {
   return network === "mainnet" ? EXPLORER_MAINNET : EXPLORER_SEPOLIA;
 }
 
-/** Derive the agent's account from a 0x private key (testnet-only — Sepolia writes). */
+/** Derive the agent's account from a 0x private key. */
 export function accountFromKey(privateKey: string): PrivateKeyAccount {
   return privateKeyToAccount(privateKey as `0x${string}`);
 }
 
 /**
- * Write-capable client for Mantle Sepolia (ERC-8004 identity/reputation writes). Pairs a viem
- * WalletClient (signing) with a PublicClient (reads/simulation/receipts) over the same RPC.
+ * Write-capable client for a given Mantle network (ERC-8004 writes run on mainnet; x402 self-settle
+ * runs on Sepolia). Pairs a viem WalletClient (signing) with a PublicClient (reads/simulation/
+ * receipts) over the same RPC + chain. The same key can drive both networks concurrently — viem
+ * tracks nonces per (account, chain).
  */
-export function walletClientForSepolia(
+export function walletClientFor(
+  network: MantleNetwork,
   privateKey: string,
   rpcUrl?: string,
 ): { wallet: WalletClient; account: PrivateKeyAccount; public: PublicClient } {
   const account = accountFromKey(privateKey);
-  const transport = http(rpcUrl ?? MANTLE_SEPOLIA_RPC);
+  const chain = network === "mainnet" ? mantle : mantleSepoliaTestnet;
+  const transport = http(rpcUrl ?? (network === "mainnet" ? MANTLE_MAINNET_RPC : MANTLE_SEPOLIA_RPC));
   return {
     account,
-    wallet: createWalletClient({ account, chain: mantleSepoliaTestnet, transport }),
-    public: createPublicClient({ chain: mantleSepoliaTestnet, transport }),
+    wallet: createWalletClient({ account, chain, transport }),
+    public: createPublicClient({ chain, transport }),
   };
+}
+
+/** Back-compat shim — x402 self-settle + the Sepolia faucet keep settling on Sepolia. */
+export function walletClientForSepolia(
+  privateKey: string,
+  rpcUrl?: string,
+): { wallet: WalletClient; account: PrivateKeyAccount; public: PublicClient } {
+  return walletClientFor("sepolia", privateKey, rpcUrl);
 }

@@ -1,17 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { ERC8004, REPUTATION_ABI } from "@mantleflow/agent";
-import { connectSepolia, giveFeedback, hasWallet } from "../../lib/wallet";
-
-const EXPLORER = "https://explorer.sepolia.mantle.xyz";
+import { REPUTATION_ABI } from "@mantleflow/agent";
+import { connect as connectWallet, giveFeedback, hasWallet, type WalletNetwork } from "../../lib/wallet";
 
 /**
- * Genuine third-party reputation: the VISITOR connects their own Sepolia wallet and signs
- * giveFeedback(agentId,…) themselves. The contract forbids self-feedback, so this is the only honest
- * way reputation accrues — and it's the visitor's address + gas, not ours.
+ * Genuine third-party reputation: the VISITOR connects their own wallet (on the agent's identity
+ * network — mainnet by default) and signs giveFeedback(agentId,…) themselves. The contract forbids
+ * self-feedback, so this is the only honest way reputation accrues — visitor's address + gas, not ours.
+ * Registry/explorer/network are passed in from the live AgentCard (single source of truth).
  */
-export function RateAgent({ agentId, onRated }: { agentId: string; onRated?: () => void }) {
+export function RateAgent({
+  agentId,
+  reputationRegistry,
+  explorer,
+  network,
+  onRated,
+}: {
+  agentId: string;
+  reputationRegistry: string;
+  explorer: string;
+  network: WalletNetwork;
+  onRated?: () => void;
+}) {
   const [account, setAccount] = useState<string | null>(null);
   const [score, setScore] = useState(5);
   const [busy, setBusy] = useState<"connect" | "rate" | null>(null);
@@ -22,7 +33,7 @@ export function RateAgent({ agentId, onRated }: { agentId: string; onRated?: () 
     setErr(null);
     setBusy("connect");
     try {
-      setAccount(await connectSepolia());
+      setAccount(await connectWallet(network));
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     } finally {
@@ -38,7 +49,7 @@ export function RateAgent({ agentId, onRated }: { agentId: string; onRated?: () 
     try {
       const hash = await giveFeedback({
         account: account as `0x${string}`,
-        reputationRegistry: ERC8004.sepolia.reputation as `0x${string}`,
+        reputationRegistry: reputationRegistry as `0x${string}`,
         abi: REPUTATION_ABI,
         agentId,
         score,
@@ -60,7 +71,7 @@ export function RateAgent({ agentId, onRated }: { agentId: string; onRated?: () 
 
       {!hasWallet() ? (
         <p className="m-0 font-mono text-[10px] leading-[1.6] text-mut2">
-          No injected wallet detected. Install MetaMask (Mantle Sepolia, a little MNT from the faucet) to
+          No injected wallet detected. Install MetaMask (on {network === "mainnet" ? "Mantle, a little MNT for gas" : "Mantle Sepolia"}) to
           post on-chain feedback from your own address.
         </p>
       ) : !account ? (
@@ -98,7 +109,7 @@ export function RateAgent({ agentId, onRated }: { agentId: string; onRated?: () 
       {tx ? (
         <p className="mt-2 font-mono text-[10px]">
           <span className="text-mut2">rating tx </span>
-          <a href={`${EXPLORER}/tx/${tx}`} target="_blank" rel="noreferrer" className="truncate text-acid underline">
+          <a href={`${explorer}/tx/${tx}`} target="_blank" rel="noreferrer" className="truncate text-acid underline">
             {tx.slice(0, 18)}…
           </a>
         </p>

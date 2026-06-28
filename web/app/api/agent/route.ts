@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { loadConfig, createErc8004Reader, ERC8004 } from "@mantleflow/agent";
 
-// Reads the agent's ERC-8004 identity + provenance-receipt count from Mantle Sepolia. No key needed
-// for the reads; honest "registered: false" when AGENT_ID isn't set yet.
+// Reads the agent's ERC-8004 identity + provenance-receipt count from its registered network
+// (mainnet by default — D23). No key needed for the reads; honest "registered: false" when AGENT_ID
+// isn't set yet.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -18,12 +19,14 @@ function jsonSafe(data: unknown, status = 200): NextResponse {
 export async function GET() {
   try {
     const cfg = loadConfig(process.env as Record<string, string | undefined>);
+    const isMain = cfg.erc8004Network === "mainnet";
+    const reg = ERC8004[cfg.erc8004Network];
     const registry = {
-      chain: "eip155:5003",
-      network: "Mantle Sepolia",
-      identity: ERC8004.sepolia.identity,
-      reputation: ERC8004.sepolia.reputation,
-      explorer: "https://explorer.sepolia.mantle.xyz",
+      chain: isMain ? "eip155:5000" : "eip155:5003",
+      network: isMain ? "Mantle" : "Mantle Sepolia",
+      identity: reg.identity,
+      reputation: reg.reputation,
+      explorer: isMain ? "https://explorer.mantle.xyz" : "https://explorer.sepolia.mantle.xyz",
       agentCardUrl: cfg.agentCardUrl,
     };
     if (!cfg.agentId) {

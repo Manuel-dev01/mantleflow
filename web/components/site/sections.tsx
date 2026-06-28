@@ -293,8 +293,8 @@ export function Manifesto() {
 
 export function Footer() {
   return (
-    <div className="px-6 pb-12 pt-20 md:px-[34px]">
-      <h2 className="m-0 font-display text-[clamp(56px,17vw,260px)] font-extrabold uppercase leading-[0.82] tracking-[-0.04em]">
+    <div className="overflow-hidden px-6 pb-12 pt-20 md:px-[34px]">
+      <h2 className="m-0 whitespace-nowrap font-display text-[clamp(40px,12vw,200px)] font-extrabold uppercase leading-[0.82] tracking-[-0.04em]">
         Mantle<span className="text-acid">flow</span>
       </h2>
       <div className="mt-10 flex flex-wrap items-end justify-between gap-[30px] border-t-2 border-paper pt-[26px]">

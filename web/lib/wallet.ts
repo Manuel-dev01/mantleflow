@@ -2,16 +2,30 @@
 
 import { createWalletClient, custom, type Address, type Hex } from "viem";
 
-// Mantle Sepolia (5003) — for the visitor's "Rate this agent" flow. Minimal window.ethereum
-// integration (no wagmi/RainbowKit).
-const SEPOLIA = {
-  chainIdHex: "0x138b", // 5003
-  params: {
-    chainId: "0x138b",
-    chainName: "Mantle Sepolia Testnet",
-    nativeCurrency: { name: "Mantle", symbol: "MNT", decimals: 18 },
-    rpcUrls: ["https://rpc.sepolia.mantle.xyz"],
-    blockExplorerUrls: ["https://explorer.sepolia.mantle.xyz"],
+// Mantle networks for browser-wallet flows (minimal window.ethereum, no wagmi/RainbowKit):
+//  - mainnet (5000) — the visitor's "Rate this agent" flow (ERC-8004 reputation lives on mainnet).
+//  - sepolia (5003) — the x402 pay-per-query flow (testnet tmUSD).
+export type WalletNetwork = "mainnet" | "sepolia";
+const CHAINS: Record<WalletNetwork, { chainIdHex: string; params: Record<string, unknown> }> = {
+  mainnet: {
+    chainIdHex: "0x1388", // 5000
+    params: {
+      chainId: "0x1388",
+      chainName: "Mantle",
+      nativeCurrency: { name: "Mantle", symbol: "MNT", decimals: 18 },
+      rpcUrls: ["https://rpc.mantle.xyz"],
+      blockExplorerUrls: ["https://explorer.mantle.xyz"],
+    },
+  },
+  sepolia: {
+    chainIdHex: "0x138b", // 5003
+    params: {
+      chainId: "0x138b",
+      chainName: "Mantle Sepolia Testnet",
+      nativeCurrency: { name: "Mantle", symbol: "MNT", decimals: 18 },
+      rpcUrls: ["https://rpc.sepolia.mantle.xyz"],
+      blockExplorerUrls: ["https://explorer.sepolia.mantle.xyz"],
+    },
   },
 };
 
@@ -28,23 +42,29 @@ export function hasWallet(): boolean {
   return eth() !== null;
 }
 
-/** Connect the injected wallet and ensure it is on Mantle Sepolia. Returns the selected address. */
-export async function connectSepolia(): Promise<Address> {
+/** Connect the injected wallet and ensure it is on the given Mantle network. Returns the address. */
+export async function connect(network: WalletNetwork): Promise<Address> {
   const provider = eth();
   if (!provider) throw new Error("No wallet found. Install MetaMask (or any EIP-1193 wallet).");
+  const chain = CHAINS[network];
 
   const accounts = (await provider.request({ method: "eth_requestAccounts" })) as string[];
   const account = accounts[0] as Address;
 
   const current = (await provider.request({ method: "eth_chainId" })) as string;
-  if (current.toLowerCase() !== SEPOLIA.chainIdHex) {
+  if (current.toLowerCase() !== chain.chainIdHex) {
     try {
-      await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: SEPOLIA.chainIdHex }] });
+      await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: chain.chainIdHex }] });
     } catch {
-      await provider.request({ method: "wallet_addEthereumChain", params: [SEPOLIA.params] });
+      await provider.request({ method: "wallet_addEthereumChain", params: [chain.params] });
     }
   }
   return account;
+}
+
+/** Back-compat shim — x402 pay-per-query stays on Sepolia. */
+export async function connectSepolia(): Promise<Address> {
+  return connect("sepolia");
 }
 
 /** Write a giveFeedback tx from the visitor's own wallet (genuine third-party reputation). */

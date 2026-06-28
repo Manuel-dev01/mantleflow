@@ -176,6 +176,31 @@ Remaining open items are tracked in §6 (non-blocking).
   RWAs** (checked via the CCIP REST API `docs.chain.link/api/ccip/v1/tokens?environment=mainnet&chainId=5000`,
   2026-06-27). A real distribution finding: RWAs travel via LayerZero or not at all, not CCIP.
 - **Cost** is per-tx dynamic for both CCIP and LayerZero → reported "not quoted" (never fabricated).
+- **OFT routes confirmed live 2026-06-27:** cmETH + USDe → cross-chain sub-score **computed, value 70**
+  (LayerZero-OFT available, CCIP not). mETH / MI4 → **insufficient-data** (both channels probed, none
+  available). The map/Routes UI reflect this exactly.
+
+## 10. Accuracy refinements + dual-network (confirmed 2026-06-27)
+
+- **DefiLlama `exposure` classifies swap vs yield** — the `/pools` payload carries `exposure`
+  (`multi` = a 2-sided AMM/trading pool; `single` = a single-asset deposit = yield/lending/vault).
+  Verified live across all 37 Mantle pools: only **`fluxion-network` is `multi`**; `aave-v3`,
+  `woofi-earn`, `circuit-protocol`, `ondo-yield-assets`, `clearpool-lending`, etc. are all `single`.
+  Per-asset: MI4 = 0 pools; mETH = woofi-earn + circuit-protocol (both `single`/yield); cmETH =
+  woofi-earn (yield); fBTC/USDe = aave-v3 (yield); USDY = ondo-yield-assets (yield). ⇒ **none of the
+  six tracked assets has a genuine secondary TRADING venue via probed venues** (Merchant Moe v2
+  `getPair` + DefiLlama AMM pools). Reachability/depth/fragmentation now count swap venues only; yield
+  positions are surfaced separately. (D24.)
+- **Borrowability now reflects frozen reserves** — mETH's Lendle reserve is **FROZEN**; the sub-score
+  returns **20** (was ~91 from LTV) so it no longer contradicts the on-chain frozen flag. (D25.)
+- **Live engine read (2026-06-27, post-fix):** MI4 → composite **5** (gated + no trading venue + not
+  borrowable); mETH → composite **34** (reachability 0, borrowability 20 frozen, compliance 90 open).
+- **Dual-network capability** — ERC-8004 identity/provenance/reputation are now network-selectable via
+  `ERC8004_NETWORK` (independent of `x402Network`, which stays Sepolia). Mainnet registries (§3) are
+  wired. **Default `sepolia`** until a mainnet agentId is registered (keeps the live site on #309). The
+  mainnet flip (D23) requires: fund the agent wallet with real mainnet MNT → register a new mainnet
+  agentId → set `ERC8004_NETWORK=mainnet` + new `AGENT_ID` → confirm mainnet topic0 parity before
+  trusting reads. **Pending: mainnet MNT funding.**
 
 ## §6. Open items to close (non-blocking for architecture lock)
 

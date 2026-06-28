@@ -3,16 +3,21 @@ import type { LiquidityResult } from "../../dex/depth.js";
 import type { SubScore } from "../types.js";
 import { fmtUsd, liquidityBand } from "./util.js";
 
-/** Liquidity-depth sub-score from per-venue liquidity (USD at ±2% of mid where exact). */
+/** Liquidity-depth sub-score from per-venue liquidity (USD at ±2% of mid where exact). Computed over
+ * genuine SWAP venues only — single-asset yield/vault positions are not tradeable secondary depth. */
 export function depthSubScore(liq: LiquidityResult): SubScore {
+  // Keep ALL venues in inputs (drillable), but score over swap venues only.
   const inputs: Sourced<unknown>[] = liq.venues.map((v) => ({ value: v, receipt: v.receipt }));
-  if (liq.venues.length === 0) {
+  if (liq.swapVenues.length === 0) {
+    const yieldNote = liq.yieldVenues.length
+      ? ` ${liq.yieldVenues.length} yield/vault position(s) exist but are not exit liquidity.`
+      : "";
     return {
       id: "liquidity-depth",
       label: "Liquidity depth (±2% of mid)",
       status: "not-applicable",
       value: null,
-      explanation: "No venue with measurable liquidity — depth is undefined where no market exists.",
+      explanation: `No genuine trading venue — depth is undefined where no secondary market exists.${yieldNote}`,
       inputs,
     };
   }
@@ -25,7 +30,7 @@ export function depthSubScore(liq: LiquidityResult): SubScore {
     label: "Liquidity depth (±2% of mid)",
     status: "computed",
     value: liquidityBand(liq.totalLiquidityUsd),
-    explanation: `Aggregate venue liquidity ≈ ${fmtUsd(liq.totalLiquidityUsd)} across ${liq.venues.length} venue(s).${depthNote}`,
+    explanation: `Aggregate trading-venue liquidity ≈ ${fmtUsd(liq.totalLiquidityUsd)} across ${liq.swapVenues.length} venue(s).${depthNote}`,
     inputs,
   };
 }

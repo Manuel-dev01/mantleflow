@@ -3,7 +3,7 @@ import { type MantleNetwork, explorerBaseFor } from "../config/chains.js";
 import { MANTLE_DEX_FACTORIES, QUOTE_TOKENS } from "./factories.js";
 import { cpmmSlippagePct, STANDARD_CLEAR_SIZE_USD } from "./slippage.js";
 import { hasCode } from "../lib/onchain.js";
-import type { DefiLlamaAdapter } from "../adapters/defillama.js";
+import { type DefiLlamaAdapter, classifyLlamaPool } from "../adapters/defillama.js";
 import type { PriceAdapter } from "../adapters/prices.js";
 import type { SourceReceipt } from "../types/source-receipt.js";
 
@@ -21,11 +21,20 @@ export interface VenueLiquidity {
   /** Constant-product price impact (%) to clear a $250k order; null for TVL-proxy venues. */
   slipPctAt250k: number | null;
   method: "cpmm-exact" | "tvl-proxy";
+  /** swap = genuine trading venue (counts toward depth); yield = single-asset position (does not). */
+  venueType: "swap" | "yield";
+  classification?: string;
   receipt: SourceReceipt;
 }
 
 export interface LiquidityResult {
+  /** All venues (swap + yield), for drill-down. */
   venues: VenueLiquidity[];
+  /** Genuine trading venues — the only ones counted in the totals below. */
+  swapVenues: VenueLiquidity[];
+  /** Single-asset yield/vault positions — surfaced but excluded from tradeable depth. */
+  yieldVenues: VenueLiquidity[];
+  /** Totals over SWAP venues only (vault TVL is not tradeable secondary liquidity). */
   totalLiquidityUsd: number;
   totalDepthUsdAt2pct: number;
 }
@@ -118,6 +127,7 @@ export async function analyzeLiquidity(
         // balanced pool) — exact CPMM impact for a $250k exit.
         slipPctAt250k: cpmmSlippagePct(quoteReserveUsd, STANDARD_CLEAR_SIZE_USD),
         method: "cpmm-exact",
+        venueType: "swap", // an on-chain CPMM pair is a genuine trading venue
         receipt: {
           sourceName: "Mantle RPC (getReserves)",
           url: `${explorer}/address/${pair}`,
@@ -129,22 +139,31 @@ export async function analyzeLiquidity(
     }
   }
 
-  // 2) DefiLlama pools — TVL as the liquidity proxy for v3 / Liquidity Book venues.
+  // 2) DefiLlama pools — TVL as the liquidity proxy for v3 / Liquidity Book venues, classified
+  //    swap vs yield (single-asset vault TVL is not tradeable secondary liquidity).
   const pools = await llama.poolsForToken(asset, observedAt);
   for (const p of pools.value) {
+    const c = classifyLlamaPool(p);
     venues.push({
       venue: `${p.project} ${p.symbol}`,
       liquidityUsd: p.tvlUsd,
       depthUsdAt2pct: null,
       slipPctAt250k: null,
       method: "tvl-proxy",
-      receipt: { ...pools.receipt, note: `DefiLlama pool ${p.pool} · TVL $${Math.round(p.tvlUsd)}` },
+      venueType: c.type,
+      classification: c.reason,
+      receipt: { ...pools.receipt, note: `DefiLlama pool ${p.pool} · TVL $${Math.round(p.tvlUsd)} — ${c.reason}` },
     });
   }
 
+  const swapVenues = venues.filter((v) => v.venueType === "swap");
+  const yieldVenues = venues.filter((v) => v.venueType === "yield");
   return {
     venues,
-    totalLiquidityUsd: venues.reduce((s, v) => s + v.liquidityUsd, 0),
-    totalDepthUsdAt2pct: venues.reduce((s, v) => s + (v.depthUsdAt2pct ?? 0), 0),
+    swapVenues,
+    yieldVenues,
+    // Totals over SWAP venues only — vault TVL isn't tradeable exit liquidity.
+    totalLiquidityUsd: swapVenues.reduce((s, v) => s + v.liquidityUsd, 0),
+    totalDepthUsdAt2pct: swapVenues.reduce((s, v) => s + (v.depthUsdAt2pct ?? 0), 0),
   };
 }

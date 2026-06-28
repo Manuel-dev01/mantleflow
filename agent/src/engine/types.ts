@@ -59,10 +59,15 @@ export interface ComplianceGate {
   evidence: Sourced<string>[];
 }
 
-/** A secondary venue where the asset can be traded. */
+/** A secondary venue where the asset is present — a genuine trading venue (`swap`) or a
+ * single-asset yield/lending/vault position (`yield`, not somewhere you can sell into). */
 export interface SecondaryVenue {
   venue: string;
   kind: "dex-pair" | "dex-pool" | "cex" | "other";
+  /** swap = a real trading venue counts toward reachability; yield = surfaced but not counted. */
+  venueType: "swap" | "yield";
+  /** Why it was classified swap vs yield (e.g. "exposure=single — yield/lending"). */
+  classification?: string;
   pairAddress?: string;
   receipt: SourceReceipt;
 }

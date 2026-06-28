@@ -8,7 +8,8 @@ import { RateAgent } from "./RateAgent";
 /**
  * The agent's ERC-8004 on-chain identity — a compact badge that expands to the verifiable details
  * (agentId, owner, registries, AgentCard, genuine third-party reputation) read live from Mantle
- * Sepolia, plus a "Rate this agent" flow. Degrades honestly to "identity pending" when unregistered.
+ * (mainnet by default), plus a "Rate this agent" flow. Degrades honestly to "identity pending" when
+ * unregistered.
  */
 export function AgentIdentity() {
   const [info, setInfo] = useState<AgentInfo | null>(null);
@@ -78,11 +79,19 @@ export function AgentIdentity() {
                   AgentCard ↗
                 </a>
               </div>
-              {agentId ? <RateAgent agentId={agentId} onRated={load} /> : null}
+              {agentId ? (
+                <RateAgent
+                  agentId={agentId}
+                  reputationRegistry={info.registry.reputation}
+                  explorer={info.registry.explorer}
+                  network={info.registry.chain === "eip155:5000" ? "mainnet" : "sepolia"}
+                  onRated={load}
+                />
+              ) : null}
             </dl>
           ) : (
             <p className="m-0 text-mut">
-              Identity not yet registered on Mantle Sepolia. The registries are live
+              Identity not yet registered on {info?.registry.network ?? "Mantle"}. The registries are live
               ({short(info?.registry.identity ?? "")}); registration writes the agentId.
             </p>
           )}

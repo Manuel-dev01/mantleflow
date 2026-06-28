@@ -12,27 +12,31 @@ const goodLog = { address: IDENTITY, topics: [TOPIC, agentTopic, keyTopic] };
 
 describe("metadataLogMatches", () => {
   it("matches the real MetadataSet log (agentId + keccak(resultHash))", () => {
-    expect(metadataLogMatches(goodLog, "309", resultHash)).toBe(true);
+    expect(metadataLogMatches(goodLog, "309", resultHash, IDENTITY)).toBe(true);
   });
 
   it("rejects a different agentId", () => {
-    expect(metadataLogMatches(goodLog, "310", resultHash)).toBe(false);
+    expect(metadataLogMatches(goodLog, "310", resultHash, IDENTITY)).toBe(false);
   });
 
   it("rejects a different result hash (tampered)", () => {
     const other = "0x0000000000000000000000000000000000000000000000000000000000000001" as const;
-    expect(metadataLogMatches(goodLog, "309", other)).toBe(false);
+    expect(metadataLogMatches(goodLog, "309", other, IDENTITY)).toBe(false);
   });
 
   it("rejects a log from another contract", () => {
-    expect(metadataLogMatches({ ...goodLog, address: "0xdeadbeef00000000000000000000000000000000" }, "309", resultHash)).toBe(false);
+    expect(metadataLogMatches({ ...goodLog, address: "0xdeadbeef00000000000000000000000000000000" }, "309", resultHash, IDENTITY)).toBe(false);
+  });
+
+  it("rejects a log matched against a different registry address", () => {
+    expect(metadataLogMatches(goodLog, "309", resultHash, "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432")).toBe(false);
   });
 
   it("rejects a different event signature", () => {
-    expect(metadataLogMatches({ address: IDENTITY, topics: ["0x" + "00".repeat(32), agentTopic, keyTopic] }, "309", resultHash)).toBe(false);
+    expect(metadataLogMatches({ address: IDENTITY, topics: ["0x" + "00".repeat(32), agentTopic, keyTopic] }, "309", resultHash, IDENTITY)).toBe(false);
   });
 
   it("handles missing topics safely", () => {
-    expect(metadataLogMatches({ address: IDENTITY, topics: [] }, "309", resultHash)).toBe(false);
+    expect(metadataLogMatches({ address: IDENTITY, topics: [] }, "309", resultHash, IDENTITY)).toBe(false);
   });
 });

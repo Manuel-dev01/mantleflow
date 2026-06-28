@@ -53,8 +53,11 @@ cannot source**, and never emits a composite without showing its parts (`agent/s
 
 ### How the math actually works (no hand-waving)
 
-- **Reachability** (`engine.ts:17`): `0` if no venue found; otherwise `min(100, 25 + 25·venues)`. A
-  zero here is a *finding*, with the venues checked named in the explanation.
+- **Reachability** (`engine.ts:17`, **D24**): `0` if no genuine *trading* venue is found; otherwise
+  `min(100, 25 + 25·swap-venues)`. Venues are classified swap-vs-yield via DefiLlama's `exposure`
+  field (`multi` = a 2-sided AMM pool = tradeable; `single` = a single-asset deposit = yield/vault,
+  which you cannot sell into) plus on-chain `getPair` pairs (always swap). Only swap venues count;
+  yield/vault positions are surfaced separately. A zero is a *finding*, scoped to the probed venues.
 - **Liquidity depth** (`subscores/depth.ts`): for Uniswap-v2-style pairs (Merchant Moe classic) we
   read on-chain reserves and compute the **exact** USD tradeable within ±2% of mid via the
   constant-product invariant. For v3 / Liquidity-Book venues, where we don't hold tick-level
@@ -65,9 +68,11 @@ cannot source**, and never emits a composite without showing its parts (`agent/s
   `null` and the UI shows "—" rather than an unsourced number.
 - **Fragmentation** (`subscores/fragmentation.ts`): HHI over per-venue USD liquidity shares. High =
   concentrated (one venue), low = fragmented (capital split, harder to exit size). Components shown.
-- **Borrowability** (`subscores/borrowability.ts`, **D10**): Lendle (Aave-v2 fork) is the source;
+- **Borrowability** (`subscores/borrowability.ts`, **D10/D25**): Lendle (Aave-v2 fork) is the source;
   `getReserveConfigurationData`/`getReserveData` return decoded LTV / liquidation threshold / supply
-  & borrow rates / utilization. Not-listed = `0`, reported as a finding.
+  & borrow rates / utilization. Not-listed = `0`; a **FROZEN** reserve (supply/borrow halted) = `20`
+  regardless of LTV — practical borrowability is near-zero, and the score must not contradict the
+  on-chain frozen flag. Both are reported as findings.
 - **Cross-chain** (`subscores/crosschain.ts`, **D21**): scored only from verified channels —
   LayerZero OFT (on-chain `endpoint()` == LZ V2 endpoint) and Chainlink CCIP membership. When no
   channel is verified, the sub-score is **insufficient-data** and is *excluded from the composite* —
@@ -122,16 +127,32 @@ asset in the live tool and drill into the sub-score receipts.
 **The finding:** MI4 is a fully-issued, $1M-scale tokenized index whose *only* exit is issuer
 redemption, and whose holders are an allowlist. The "I hold $1M of MI4, where can I exit?" question —
 the brief's one live example — has a concrete, source-backed answer: **you can't sell it on the open
-market, and you couldn't have bought it without being allowlisted.** That is the distribution thesis
-proven on a single asset.
+market, and you couldn't have bought it without being allowlisted.** Composite **5/100**. That is the
+distribution thesis proven on a single asset.
 
-### 4.2 mETH — the counter-example: a freely-distributed asset
-`0xcDA86A272531e8640cD7F1a92c01839911B90bb0` (18 decimals). On Lendle it is **accepted collateral,
-LTV 82.5%, liquidation threshold 86%, utilization ~21%** (on-chain Lendle `ProtocolDataProvider`,
-2026-06-26). Freely transferable, with live secondary venues. mETH shows the engine scoring a
-*high*-distribution asset, so the MI4 zero isn't an artifact of a broken detector — the contrast is real.
+### 4.2 The systemic finding: *none* of the six has a genuine secondary trading venue on Mantle
+This is the headline result of the swap-vs-yield classification (decision **D24**). Across all six
+tracked assets, every venue that DefiLlama surfaces on Mantle is a **single-asset yield/lending/vault
+position** (`exposure = single`) — woofi-earn and circuit-protocol for mETH, aave-v3 for fBTC/USDe,
+Ondo's vault for USDY — not a 2-sided AMM pool you can sell into; and no on-chain Merchant Moe v2 pair
+exists for any of them. So, *scoped to the venues we probe* (Merchant Moe v2 + DefiLlama AMM pools),
+**reachability is 0 for all six**: these assets are issued and then **parked in yield**, not made
+liquid on a secondary market. Issuance is easy; distribution is not — measured, on-chain, asset by asset.
 
-### 4.3 Cross-chain: RWAs travel by LayerZero or not at all — never CCIP
+### 4.3 The engine discriminates (it is not a broken detector)
+A zero everywhere would be worthless if the engine couldn't tell assets apart. It can, on the *other*
+axes — proof the reachability zeros are real signal, not a stuck probe:
+- **Compliance** splits cleanly: **GATED** for MI4 (Securitize allowlist) and USDY (Ondo blocklist
+  hook) vs **freely transferable** for mETH / fBTC / USDe.
+- **Cross-chain** splits: **cmETH and USDe score 70** (live LayerZero OFT endpoint) vs insufficient-data
+  for mETH / MI4 (no verified channel).
+- **Borrowability** splits: mETH is **listed on Lendle but FROZEN → 20** (not the ~91 its 82.5% LTV
+  would imply — decision **D25**, so the score agrees with the on-chain frozen flag) vs **0** for the
+  not-listed assets.
+- Net composites differ accordingly — MI4 **5**, mETH **34** — each labelled with exactly which
+  sub-scores it includes.
+
+### 4.4 Cross-chain: RWAs travel by LayerZero or not at all — never CCIP
 - **LayerZero V2 endpoint on Mantle** = `0x1a44076050125825900e736c501f859c50fE728c`, confirmed via
   on-chain `endpoint()` on **cmETH** (`0xE6829d9a…e8fA`) and **USDe** (`0x5d3a1Ff2…ef34`) — both are
   LayerZero OFTs. mETH / fBTC / MI4 / USDY do **not** expose this endpoint (2026-06-27).
@@ -143,13 +164,13 @@ asset — there is no neutral, CCIP-style RWA bridge. An asset that isn't deploy
 verified canonical bridge channel at all.* That is a structural distribution gap, surfaced from two
 independent on-chain/first-party sources.
 
-### 4.4 USDY — gated by a different mechanism
+### 4.5 USDY — gated by a different mechanism
 Ondo USDY `0x5bE26527e817998A7206475496fDE1E68957c5A6` (18, proxy) carries a **blocklist transfer
 hook** (on-chain, 2026-06-26) — a different compliance mechanism than MI4's allowlist, detected by the
 same engine. Distinguishing *allowlist* (permissioned-in) from *blocklist* (permissioned-out) is a
 real distribution distinction, not a single "compliant/non-compliant" bit.
 
-### 4.5 syrupUSDT — distribution can *regress*
+### 4.6 syrupUSDT — distribution can *regress*
 Maple Finance's syrupUSDT, listed in the brief as a Mantle asset (~$90.1M TVL, Q1 2026), is **no
 longer on Mantle**: Maple withdrew USDT from Aave-on-Mantle ~2026-04-20 (rsETH-exploit caution). We
 record this as a first-class distribution finding — *an RWA that left Mantle* — rather than silently
@@ -169,13 +190,19 @@ YAML frontmatter; agentskills.io/specification, 2026-06-25), wrapping our MCP se
 `get_agent_identity` (`mcp/src/server.ts`, stdio transport — decision **D17**). Any Claude
 Desktop/CLI agent can install the skill and query Mantle distribution.
 
-### 5.2 ERC-8004 identity + genuine third-party reputation — live on Mantle Sepolia
+### 5.2 ERC-8004 identity + genuine third-party reputation
 - **Registered agentId = `309`** on Mantle Sepolia (5003), agent wallet
   `0x8974881E39a5eF62214929B6CaA6EC0C6e7D47c7`, register tx
   `0x107ba4b249c7ec9794f4418c0032b4909d3edad59a0b275e06c9a31d319d5b88` (ERC-721 mint;
-  `ownerOf(309)`/`tokenURI(309)` read back the wallet + the AgentCard URL). Registries (on-chain
+  `ownerOf(309)`/`tokenURI(309)` read back the wallet + the AgentCard URL). Sepolia registries (on-chain
   verified): Identity `0x8004A818BFB912233c491871b3d84c89A494BD9e`, Reputation
   `0x8004B663056A597Dffe9eCcC1965A193B7388713`.
+- **Dual-network → mainnet** (decision **D23**): the identity stack is network-selectable (the same
+  agent key, the same code path) and is moving to **Mantle mainnet** registries
+  (`0x8004A169…`/`0x8004BAa1…`) for the strongest verifiable identity, while x402 stays on Sepolia
+  (D22). The flip is the final deploy step — register a new mainnet agentId, set `ERC8004_NETWORK=mainnet`
+  + the new `AGENT_ID`, after confirming the mainnet registries emit the same event topic0 as Sepolia.
+  Until then the live identity reads Sepolia #309 (so the deployment never breaks).
 - **The AgentCard** is served at `https://mantleflow.vercel.app/.well-known/agent-card.json` — the
   exact `agentURI` registered on-chain.
 - **Provenance, not self-rating** (decision **D16**): we discovered live that the deployed Reputation
@@ -239,8 +266,9 @@ USDC — neither is demo-friendly. So we built a **real, complete, unblocked** x
 
 ### Test & verification status
 - `contracts`: 6 Foundry tests green (tmUSD transferWithAuthorization, replay, expiry, bad-sig,
-  balance, mint-cap). `agent`: 41 Vitest tests green (engine sub-scores, x402 verify/encode, ERC-8004
-  receipt-decode, cross-chain detection). `agent` + `web` typecheck and build clean.
+  balance, mint-cap). `agent`: 43 Vitest tests green (engine sub-scores incl. swap/yield + frozen
+  cases, x402 verify/encode, ERC-8004 receipt-decode, cross-chain detection). `agent` + `web`
+  typecheck and build clean.
 - The full paid flow was smoke-tested **live against production**: 402 → faucet mint → EIP-3009 sign →
   resend with `X-PAYMENT` → 200 + real on-chain settlement + the LLM answer. `/api/map` and all
   browsing remained free.
@@ -251,6 +279,10 @@ USDC — neither is demo-friendly. So we built a **real, complete, unblocked** x
 
 Stating these is part of the accuracy discipline — a judge should see the boundary clearly.
 
+- **Reachability is scoped to the venues we probe** — Merchant Moe v2 `getPair` + DefiLlama AMM
+  pools. "No genuine secondary trading venue" always means *via these probes* (we don't claim an
+  absolute absence across every Mantle DEX); yield/vault positions are surfaced, not silently dropped
+  (D24).
 - **Depth on v3 / Liquidity-Book venues is a TVL proxy, not a ±2% depth.** We label it as such and
   never compute per-$250k slippage where we lack tick-level reserves (D11, D15).
 - **Compliance is detected from the contract**, not from a legal opinion. We report the on-chain
@@ -258,8 +290,9 @@ Stating these is part of the accuracy discipline — a judge should see the boun
   cannot be source-verified from a contract (decision **D14**, the "Gates" tab).
 - **Cross-chain cost is not quoted** — per-tx LayerZero/CCIP fees are dynamic. We report channel
   existence, never an invented fee. Issuer-specific bridges we don't probe are not claimed either way.
-- **Identity/x402 run on Mantle Sepolia testnet**, clearly labelled; tmUSD is a valueless test token.
-  Mainnet USDC + the QuestFlow facilitator are env-switchable, pending the gated facilitator key.
+- **x402 runs on Mantle Sepolia testnet**, clearly labelled; tmUSD is a valueless test token. Mainnet
+  USDC + the QuestFlow facilitator are env-switchable, pending the gated facilitator key. The
+  **ERC-8004 identity is moving to mainnet** (D23); until that flip it reads Sepolia #309.
 - **The Research Challenge's own rubric/submission page** was not web-indexed at build time
   (`VERIFIED.md` §6.1); the writeup is built to the brief's stated judging axes (quality, accuracy,
   originality, depth) and the four non-negotiable outcomes.

@@ -12,24 +12,29 @@ const venue = (liquidityUsd: number) => ({
   depthUsdAt2pct: null,
   slipPctAt250k: null,
   method: "tvl-proxy" as const,
+  venueType: "swap" as const,
   receipt: rcpt,
+});
+/** LiquidityResult over swap venues (the only ones the depth/fragmentation sub-scores score). */
+const liqOf = (venues: ReturnType<typeof venue>[]): LiquidityResult => ({
+  venues,
+  swapVenues: venues,
+  yieldVenues: [],
+  totalLiquidityUsd: venues.reduce((s, v) => s + v.liquidityUsd, 0),
+  totalDepthUsdAt2pct: 0,
 });
 
 describe("fragmentation HHI", () => {
   it("single venue → HHI 10000 → value 0 (fully concentrated)", () => {
-    const liq: LiquidityResult = { venues: [venue(1000)], totalLiquidityUsd: 1000, totalDepthUsdAt2pct: 0 };
-    const s = fragmentationSubScore(liq);
+    const s = fragmentationSubScore(liqOf([venue(1000)]));
     expect(s.value).toBe(0);
     expect(s.explanation).toContain("10000");
   });
   it("two equal venues → HHI 5000 → value 50", () => {
-    const liq: LiquidityResult = { venues: [venue(500), venue(500)], totalLiquidityUsd: 1000, totalDepthUsdAt2pct: 0 };
-    expect(fragmentationSubScore(liq).value).toBe(50);
+    expect(fragmentationSubScore(liqOf([venue(500), venue(500)])).value).toBe(50);
   });
   it("no venues → not-applicable", () => {
-    expect(fragmentationSubScore({ venues: [], totalLiquidityUsd: 0, totalDepthUsdAt2pct: 0 }).status).toBe(
-      "not-applicable",
-    );
+    expect(fragmentationSubScore(liqOf([])).status).toBe("not-applicable");
   });
 });
 
@@ -64,6 +69,11 @@ describe("borrowability", () => {
   });
   it("collateral → scales with LTV", () => {
     expect(borrowabilitySubScore({ value: base, receipt: rcpt }).value!).toBeGreaterThanOrEqual(60);
+  });
+  it("frozen reserve → low score (≤20) even when collateral-enabled, with FROZEN explanation", () => {
+    const s = borrowabilitySubScore({ value: { ...base, isFrozen: true }, receipt: rcpt });
+    expect(s.value!).toBeLessThanOrEqual(20);
+    expect(s.explanation).toContain("FROZEN");
   });
 });
 

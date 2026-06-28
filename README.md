@@ -39,17 +39,21 @@ A finding of *"no secondary market"* or *"holder is gated"* is a headline result
   datum source-receipted, the composite labelled with exactly which sub-scores it includes.
 - **AI Agent Skill** (the bonus) — `skill/mantleflow-distribution/` (open `SKILL.md` format) wrapping
   the **MCP server** (`/mcp`, stdio).
-- **ERC-8004 identity live on Mantle Sepolia** — agentId **309**; per-analysis provenance via
-  `Identity.setMetadata` (content-addressed `keccak256` receipts, tx-receipt-verifiable); genuine
+- **ERC-8004 identity** — agentId **309** (Sepolia today; **dual-network**, moving to Mantle mainnet —
+  the final flip is an env change after a funded mainnet registration, D23); per-analysis provenance
+  via `Identity.setMetadata` (content-addressed `keccak256` receipts, tx-receipt-verifiable); genuine
   third-party reputation (visitors rate from their own wallet — self-rating is forbidden on-chain).
 - **x402 pay-per-query live** — real HTTP 402 + EIP-3009 `transferWithAuthorization`, self-settled
   on-chain (testnet tmUSD, gasless buyer via server faucet); gates `/api/query` only, all browsing
   free; QuestFlow facilitator + mainnet USDC pluggable via env.
 
 Headline findings (live): **MI4** is gated (Securitize DS-Token allowlist) with **no on-chain
-secondary venue** — issued but undistributed; **mETH** is freely transferable, Lendle collateral at
-82.5% LTV; **RWAs bridge by LayerZero OFT or not at all** (none are on Mantle's CCIP token set);
-**syrupUSDT left Mantle** — distribution can regress. Full writeup: [`docs/RESEARCH.md`](docs/RESEARCH.md).
+secondary venue** — issued but undistributed; **none of the six tracked assets has a genuine secondary
+*trading* venue on Mantle** (they sit in yield/lending — measured by classifying AMM vs single-asset
+pools); **mETH** is freely transferable but its Lendle reserve is **FROZEN** (borrowability scored
+accordingly, not by raw LTV); **RWAs bridge by LayerZero OFT or not at all** (cmETH/USDe verified, none
+on Mantle's CCIP set); **syrupUSDT left Mantle** — distribution can regress. Full writeup:
+[`docs/RESEARCH.md`](docs/RESEARCH.md) · checklist: [`docs/DEMO_CHECKLIST.md`](docs/DEMO_CHECKLIST.md).
 Fact ledger: [`docs/VERIFIED.md`](docs/VERIFIED.md) · decisions: [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Accuracy discipline

@@ -1,39 +1,45 @@
 import {
   type Address,
   type Hex,
-  createPublicClient,
-  http,
   keccak256,
   stringToHex,
   getAddress,
 } from "viem";
-import { mantleSepoliaTestnet } from "viem/chains";
 import { type AppConfig } from "../config/env.js";
-import { walletClientForSepolia, EXPLORER_SEPOLIA } from "../config/chains.js";
+import { type MantleNetwork, walletClientFor, publicClientFor, explorerBaseFor } from "../config/chains.js";
 import { ERC8004 } from "../config/addresses.js";
 import { IDENTITY_ABI, REPUTATION_ABI, PROVENANCE_TAG1 } from "./abis.js";
 import { type Sourced, type SourceReceipt, sourced } from "../types/source-receipt.js";
 
-const REG = ERC8004.sepolia;
+/** Resolve the network-specific ERC-8004 context (registries / RPC / explorer / label) from config.
+ * Identity + provenance + reputation default to mainnet (config.erc8004Network); x402 is separate. */
+function erc8004Ctx(config: AppConfig) {
+  const network: MantleNetwork = config.erc8004Network;
+  const reg = ERC8004[network];
+  const rpc = network === "mainnet" ? config.mantleMainnetRpc : config.mantleSepoliaRpc;
+  const explorer = explorerBaseFor(network);
+  const netLabel = network === "mainnet" ? "Mantle" : "Mantle Sepolia";
+  return { network, reg, rpc, explorer, netLabel };
+}
 
 // Deployed Identity registry's MetadataSet event signature (topic0) — captured live from the
-// register/attest tx logs on Mantle Sepolia (2026-06-27). Topics: [sig, indexed agentId,
-// indexed keccak256(metadataKey)]. See docs/VERIFIED.md §3.
+// register/attest tx logs (Mantle, 2026-06-27). Topics: [sig, indexed agentId,
+// indexed keccak256(metadataKey)]. Event-signature topic0 is identical across the same impl. See docs/VERIFIED.md §3.
 const METADATA_SET_TOPIC = "0x2c149ed548c6d2993cd73efe187df6eccabe4538091b33adbd25fafdb8a1468b";
 
 // Deployed Reputation registry's feedback event signature (topic0) — captured live 2026-06-27.
 // Topics: [sig, indexed agentId, indexed client(rater), indexed tagHash]. See docs/VERIFIED.md §3.
 const FEEDBACK_TOPIC = "0x6a4a61743519c9d648a14e6493f47dbe3ff1aa29e7785c96c8326a205e58febc";
 
-// Mantle Sepolia RPC caps eth_getLogs at ~10k blocks; chunk under that.
+// Mantle RPC caps eth_getLogs at ~10k blocks; chunk under that and scan a recent window.
 const LOG_CHUNK = 9000n;
-const LOG_CHUNKS = 6; // ~54k blocks ≈ 30h — covers the active campaign window (documented bound).
+const LOG_CHUNKS = 6; // recent ~54k-block window (documented bound — we don't scan full history).
 
-function txUrl(hash: Hex): string {
-  return `${EXPLORER_SEPOLIA}/tx/${hash}`;
+function txUrl(explorer: string, hash: Hex): string {
+  return `${explorer}/tx/${hash}`;
 }
-function addrUrl(addr: string): string {
-  return `${EXPLORER_SEPOLIA}/address/${addr}`;
+function addrUrl(explorer: string, addr: string): string {
+  return `${explorer}/address/${addr}`;
 }
 
 /** agentId → its 32-byte indexed-topic encoding. */
@@ -52,10 +58,15 @@ export interface LogLike {
  * MetadataSet event from the Identity registry with topic1 = agentId and topic2 = keccak256(key).
  * This is the reliable, RPC-range-independent provenance verification (decoded from a tx receipt).
  */
-export function metadataLogMatches(log: LogLike, agentId: string, resultHash: Hex): boolean {
+export function metadataLogMatches(
+  log: LogLike,
+  agentId: string,
+  resultHash: Hex,
+  identityRegistry: string,
+): boolean {
   const t = log.topics ?? [];
   return (
-    (log.address ?? "").toLowerCase() === REG.identity.toLowerCase() &&
+    (log.address ?? "").toLowerCase() === identityRegistry.toLowerCase() &&
     (t[0] ?? "").toLowerCase() === METADATA_SET_TOPIC &&
     (t[1] ?? "").toLowerCase() === agentTopic(agentId).toLowerCase() &&
     (t[2] ?? "").toLowerCase() === keccak256(stringToHex(resultHash)).toLowerCase()
@@ -99,10 +110,8 @@ function topicToAddress(topic: string): Address {
 
 /** Read-only ERC-8004 view (no key needed) — for the /api/agent route + UI identity panel. */
 export function createErc8004Reader(config: AppConfig) {
-  const client = createPublicClient({
-    chain: mantleSepoliaTestnet,
-    transport: http(config.mantleSepoliaRpc),
-  });
+  const { reg: REG, rpc, explorer, netLabel, network } = erc8004Ctx(config);
+  const client = publicClientFor(network, rpc);
   const observed = () => new Date().toISOString();
 
   return {
@@ -117,8 +126,8 @@ export function createErc8004Reader(config: AppConfig) {
       return sourced(
         { agentId, owner: getAddress(owner as Address), agentUri: agentUri as string },
         {
-          sourceName: "ERC-8004 Identity Registry (Mantle Sepolia eth_call)",
-          url: addrUrl(REG.identity),
+          sourceName: `ERC-8004 Identity Registry (${netLabel} eth_call)`,
+          url: addrUrl(explorer, REG.identity),
           observedAt: observed(),
           kind: "fact",
           note: `ownerOf/tokenURI(${agentId}) on ${REG.identity}`,
@@ -141,15 +150,15 @@ export function createErc8004Reader(config: AppConfig) {
       try {
         const receipt = await client.getTransactionReceipt({ hash: txHash });
         blockNumber = receipt.blockNumber.toString();
-        verified = receipt.logs.some((l) => metadataLogMatches(l, agentId, resultHash));
+        verified = receipt.logs.some((l) => metadataLogMatches(l, agentId, resultHash, REG.identity));
       } catch {
         /* unknown tx / RPC issue → not verified */
       }
       return sourced(
         { verified, blockNumber, txHash },
         {
-          sourceName: "ERC-8004 Identity Registry · MetadataSet receipt (Mantle Sepolia)",
-          url: txUrl(txHash),
+          sourceName: `ERC-8004 Identity Registry · MetadataSet receipt (${netLabel})`,
+          url: txUrl(explorer, txHash),
           observedAt: observed(),
           kind: "fact",
           note: `getTransactionReceipt(${txHash}); match agentId=${agentId} + keccak256(resultHash)`,
@@ -205,8 +214,8 @@ export function createErc8004Reader(config: AppConfig) {
       return sourced(
         { count, raters: raterList, avgScore, windowBounded: true },
         {
-          sourceName: "ERC-8004 Reputation Registry · Feedback events + getSummary (Mantle Sepolia)",
-          url: addrUrl(REG.reputation),
+          sourceName: `ERC-8004 Reputation Registry · Feedback events + getSummary (${netLabel})`,
+          url: addrUrl(explorer, REG.reputation),
           observedAt: observed(),
           kind: "fact",
           note: `Feedback logs (last ~${LOG_CHUNKS * Number(LOG_CHUNK)} blocks) + getSummary for agentId ${agentId}`,
@@ -249,9 +258,10 @@ export interface AttestResult {
  */
 export function createErc8004Writer(config: AppConfig) {
   if (!config.agentPrivateKey) {
-    throw new Error("AGENT_PRIVATE_KEY required for ERC-8004 writes (testnet-only key).");
+    throw new Error("AGENT_PRIVATE_KEY required for ERC-8004 writes.");
   }
-  const w = walletClientForSepolia(config.agentPrivateKey, config.mantleSepoliaRpc);
+  const { reg: REG, rpc, explorer, netLabel, network } = erc8004Ctx(config);
+  const w = walletClientFor(network, config.agentPrivateKey, rpc);
   const observed = () => new Date().toISOString();
 
   return {
@@ -277,8 +287,8 @@ export function createErc8004Writer(config: AppConfig) {
         agentId,
         txHash,
         receipt: {
-          sourceName: "ERC-8004 Identity Registry (Mantle Sepolia tx)",
-          url: txUrl(txHash),
+          sourceName: `ERC-8004 Identity Registry (${netLabel} tx)`,
+          url: txUrl(explorer, txHash),
           observedAt: observed(),
           kind: "fact",
           note: `register("${agentUri}") → agentId ${agentId}`,
@@ -323,7 +333,7 @@ export function createErc8004Writer(config: AppConfig) {
       const txHash = await w.wallet.writeContract(request);
       const receipt = await w.public.waitForTransactionReceipt({ hash: txHash });
       // Confirm the commitment landed in the canonical event, not merely that the tx succeeded.
-      const verified = receipt.logs.some((l) => metadataLogMatches(l, input.agentId, input.resultHash));
+      const verified = receipt.logs.some((l) => metadataLogMatches(l, input.agentId, input.resultHash, REG.identity));
       return {
         txHash,
         resultHash: input.resultHash,
@@ -331,8 +341,8 @@ export function createErc8004Writer(config: AppConfig) {
         blockNumber: receipt.blockNumber.toString(),
         verified,
         receipt: {
-          sourceName: "ERC-8004 Identity Registry · metadata (Mantle Sepolia tx)",
-          url: txUrl(txHash),
+          sourceName: `ERC-8004 Identity Registry · metadata (${netLabel} tx)`,
+          url: txUrl(explorer, txHash),
           observedAt: observed(),
           kind: "fact",
           note: `setMetadata(agentId=${input.agentId}, key=resultHash) → ${input.symbol} result commitment`,

@@ -179,3 +179,47 @@ LLM deep-dive) only**; `/api/map`, the workspace, compare, identity, attest stay
 facilitator + mainnet USDC are **pluggable via env** (`QUESTFLOW_API_KEY`, `X402_NETWORK`). When x402
 is disabled (env unset) the query runs free — `main` stays deployable. The testnet token is clearly
 labelled; every settlement tx is real + explorer-verifiable.
+
+### D23 — Dual-network: ERC-8004 identity → mainnet, x402 stays Sepolia
+**Date:** 2026-06-27. **Status:** locked (capability); registration pending mainnet funding.
+The agent's **ERC-8004 identity + provenance + reputation move to Mantle mainnet (5000)** for the
+strongest verifiable identity (judges check explorer.mantle.xyz); **x402 pay-per-query stays on Mantle
+Sepolia (5003)** with tmUSD + the gasless faucet (judge-friendly, no real money — D22). These are two
+independent env knobs: `erc8004Network` (new) and `x402Network`. The SAME `AGENT_PRIVATE_KEY` signs
+both — viem binds chain per client, so the mainnet ERC-8004 writer and the Sepolia x402 settler are
+independent (per-chain nonces); no collision. Implementation: `walletClientFor(network,…)` generalises
+`walletClientForSepolia` (kept as a shim so x402/faucet are untouched); `createErc8004Reader/Writer`
+resolve registries/RPC/explorer/labels from `erc8004Network`; `metadataLogMatches` takes the identity
+registry as a param; the AgentCard + `/api/agent` + browser wallet (`connect(network)`) + RateAgent all
+derive their network from config/the live card. **Default is `sepolia`** so the live deployment never
+breaks before a mainnet agentId exists; the move completes by (1) funding the agent wallet with real
+mainnet MNT, (2) registering a NEW mainnet agentId (`ERC8004_NETWORK=mainnet` register script, AGENT_ID
+unset), (3) setting `ERC8004_NETWORK=mainnet` + the new `AGENT_ID` on Vercel. **Verification gate
+before trusting mainnet reads:** confirm the mainnet registries emit the same `MetadataSet`/`Feedback`
+topic0 as Sepolia (a live register→attest→verify→getSummary round-trip) — a different impl would make
+reads silently empty. Full mainnet x402 in real USDC was explicitly NOT chosen (judges can't easily
+test it).
+
+### D24 — Reachability counts genuine SWAP venues only; yield/vault positions surfaced separately
+**Date:** 2026-06-27. **Status:** locked.
+The reachability + depth + fragmentation sub-scores previously counted **every** DefiLlama pool as a
+"secondary venue", inflating venue count and depth with single-asset yield/lending/vault positions you
+**cannot sell into** (e.g. woofi-earn, circuit-protocol, aave-v3). Fix: classify each venue
+swap-vs-yield via `classifyLlamaPool` — primary signal the DefiLlama **`exposure`** field (`multi` = a
+2-sided AMM/trading pool ⇒ swap; `single` = a single-asset deposit ⇒ yield), with a DEX-project
+allowlist as a fallback when exposure is absent (verified against live Mantle data 2026-06-27: only
+`fluxion-network` is `multi`; everything else is `single`). On-chain `getPair` venues are always swap.
+**Only swap venues count** toward reachability/depth/fragmentation totals; yield venues are kept in the
+drill-down inputs and shown in a separate, clearly-labelled UI row. `noSecondaryMarket` now means "no
+genuine trading venue (via probed venues)". This is more accurate and more on-thesis: every tracked
+RWA/LST currently shows **no genuine secondary trading venue** on Mantle (they sit in yield/lending),
+which is the distribution thesis made concrete. The "no trading venue" claim is always scoped to the
+venues we probe (Merchant Moe v2 + DefiLlama AMM pools), never an absolute.
+
+### D25 — Borrowability penalises a FROZEN Lendle reserve
+**Date:** 2026-06-27. **Status:** locked.
+A frozen Aave-v2/Lendle reserve cannot be supplied or borrowed against, so practical borrowability is
+near-zero — yet the score previously ignored `isFrozen` and returned the LTV-derived value (mETH read
+~91 while its reserve was FROZEN, contradicting the Gates-tab warning). Fix: when `isFrozen`, the
+borrowability sub-score returns a low value (**20**) and an explanation that leads with "reserve FROZEN
+— supply/borrow halted". The score now agrees with the on-chain frozen flag the UI already surfaces.

@@ -3,8 +3,10 @@ import { buildMapNodes, nodeStyle } from "../../../lib/derive";
 import { SourceTag } from "../../SourceTag";
 
 /**
- * Radial distribution map — center asset, edges to real venues / collateral / gate, plus one honest
- * "cross-chain · Phase 4" placeholder node. Every node carries the receipt for its underlying read.
+ * Radial distribution map — center asset, edges to real venues / collateral / gate / verified bridge
+ * routes. Trading venues, yield/vault positions and cross-chain channels are visually distinct; every
+ * node carries the receipt for its underlying read. No fabricated routes — the cross-chain node(s)
+ * reflect the actual computed reach.
  */
 export function DistributionTab({ map }: { map: DistributionMap }) {
   const nodes = buildMapNodes(map);
@@ -14,10 +16,10 @@ export function DistributionTab({ map }: { map: DistributionMap }) {
       <div className="mb-2 flex items-center justify-between">
         <span className="font-mono text-xs tracking-[0.1em] text-mut">DISTRIBUTION MAP</span>
         <div className="flex flex-wrap gap-[18px] font-mono text-[11px] text-mut">
-          <Legend swatch={<span className="block h-0 w-3 border-t-[3px] border-acid" />} label="REACHABLE" />
-          <Legend swatch={<span className="block h-0 w-3 border-t-2 border-mut2" />} label="THIN" />
+          <Legend swatch={<span className="block h-0 w-3 border-t-[3px] border-acid" />} label="TRADING" />
+          <Legend swatch={<span className="block h-0 w-3 border-t-2 border-dashed border-acid" />} label="BRIDGE" />
+          <Legend swatch={<span className="block h-0 w-3 border-t-2 border-dotted border-mut2" />} label="YIELD" />
           <Legend swatch={<span className="block h-0 w-3 border-t-2 border-dashed border-mut2" />} label="GATED" />
-          <Legend swatch={<span className="block h-0 w-3 border-t-2 border-dotted border-mut2" />} label="PHASE 4" />
         </div>
       </div>
 
@@ -97,8 +99,9 @@ export function DistributionTab({ map }: { map: DistributionMap }) {
       </div>
 
       <p className="mt-3 font-mono text-[11px] text-mut2">
-        Nodes are real reads: secondary venues (deep/thin by on-chain liquidity), Lendle collateral, and
-        the detected compliance gate. Cross-chain exits are a Phase-4 placeholder — not fabricated routes.
+        Nodes are real reads: trading venues (deep/thin by on-chain liquidity), yield/vault positions
+        (not exit liquidity), Lendle collateral, the detected compliance gate, and verified cross-chain
+        channels (LayerZero OFT / CCIP). Absences are findings — never fabricated routes.
       </p>
     </div>
   );

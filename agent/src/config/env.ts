@@ -13,17 +13,22 @@ export const AppConfigSchema = z.object({
   llmBaseUrl: z.string().url().default("https://api.deepseek.com"),
   llmModel: z.string().default("deepseek-v4-flash"),
   /**
-   * ERC-8004 agent signing key (Mantle Sepolia, testnet-only). Optional — all identity reads and
-   * the rest of the app degrade gracefully without it; only on-chain writes (register / provenance
-   * receipt) require it. Validated as a 0x-prefixed 32-byte hex private key.
+   * ERC-8004 agent signing key. Optional — all identity reads and the rest of the app degrade
+   * gracefully without it; only on-chain writes (register / provenance receipt) require it. Drives
+   * BOTH the mainnet ERC-8004 writer and the Sepolia x402 self-settle. Validated as a 0x-prefixed
+   * 32-byte hex private key.
    */
   agentPrivateKey: z
     .string()
     .regex(/^(0x)?[0-9a-fA-F]{64}$/, "AGENT_PRIVATE_KEY must be a 32-byte hex key (0x prefix optional)")
     .transform((k) => (k.startsWith("0x") ? k : `0x${k}`))
     .optional(),
-  /** The agent's ERC-8004 token id, set after registration (string to avoid bigint coercion). */
+  /** The agent's ERC-8004 token id on `erc8004Network`, set after registration. */
   agentId: z.string().regex(/^\d+$/).optional(),
+  /** Network the ERC-8004 identity/provenance/reputation lives on (x402 is a SEPARATE knob and
+   * stays on Sepolia). Defaults to "sepolia" so the live deployment never breaks before a mainnet
+   * agentId is registered; flip to "mainnet" (D23) once registered + AGENT_ID is the mainnet id. */
+  erc8004Network: z.enum(["mainnet", "sepolia"]).default("sepolia"),
   /** Stable https AgentCard URI (served by the web app at /.well-known/agent-card.json). */
   agentCardUrl: z
     .string()
@@ -59,6 +64,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     llmModel: env.LLM_MODEL ?? undefined,
     agentPrivateKey: env.AGENT_PRIVATE_KEY,
     agentId: env.AGENT_ID,
+    erc8004Network: env.ERC8004_NETWORK ?? undefined,
     agentCardUrl: env.AGENT_CARD_URL ?? undefined,
     x402Enabled: env.X402_ENABLED === "true",
     x402Network: env.X402_NETWORK ?? undefined,

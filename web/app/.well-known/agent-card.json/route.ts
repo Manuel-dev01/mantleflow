@@ -10,6 +10,8 @@ const ORIGIN = "https://mantleflow.vercel.app";
 
 export async function GET() {
   const agentId = process.env.AGENT_ID ?? null;
+  const idIsMain = (process.env.ERC8004_NETWORK ?? "sepolia") === "mainnet";
+  const reg = idIsMain ? ERC8004.mainnet : ERC8004.sepolia;
   const card = {
     type: "AgentCard",
     name: "MantleFlow",
@@ -39,10 +41,10 @@ export async function GET() {
     ],
     registrations: {
       erc8004: {
-        chain: "eip155:5003",
-        network: "Mantle Sepolia",
-        identityRegistry: ERC8004.sepolia.identity,
-        reputationRegistry: ERC8004.sepolia.reputation,
+        chain: idIsMain ? "eip155:5000" : "eip155:5003",
+        network: idIsMain ? "Mantle" : "Mantle Sepolia",
+        identityRegistry: reg.identity,
+        reputationRegistry: reg.reputation,
         agentId,
       },
     },

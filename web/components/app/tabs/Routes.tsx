@@ -24,9 +24,21 @@ export function RoutesTab({ map }: { map: DistributionMap }) {
       </div>
       <p className="m-0 mb-6 max-w-[640px] text-sm leading-[1.6] text-mut">{explanation}</p>
 
+      {/* When we probed both channels and none is available, that's a finding — frame it as one. */}
+      {routes.length > 0 && status !== "computed" ? (
+        <div className="mb-6 border-2 border-acid bg-acid/5 px-4 py-3">
+          <div className="font-mono text-[10px] tracking-[0.1em] text-acid">FINDING · NO PERMISSIONLESS BRIDGE</div>
+          <p className="m-0 mt-1 max-w-[640px] text-sm leading-[1.5] text-paper">
+            This RWA has no verified permissionless cross-chain route — it exits Mantle via a LayerZero
+            OFT or not at all. A structural distribution gap, surfaced from two independent sources below.
+          </p>
+        </div>
+      ) : null}
+
       {routes.length === 0 ? (
         <div className="border-2 border-dashed border-line p-8 font-mono text-[11px] text-mut2">
-          Cross-chain reach could not be sourced this run.
+          Cross-chain reach could not be sourced this run (transient) — we never imply a value we have
+          not sourced.
         </div>
       ) : (
         <div className="grid gap-0 border-2 border-paper md:grid-cols-3">

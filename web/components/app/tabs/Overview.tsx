@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { DistributionMap } from "@mantleflow/agent";
 import { overviewStats } from "../../../lib/derive";
 import { attest, type AttestResponse } from "../../../lib/api";
@@ -30,15 +31,16 @@ export function OverviewTab({ map, answer }: { map: DistributionMap; answer: str
         <span className="font-mono text-xs tracking-[0.1em] text-mut">AGENT ANSWER</span>
       </div>
 
+      {/* Headline always shows in the big display font; the (paid) LLM narrative renders below it as
+          readable GFM prose — tables/lists parse via remark-gfm, sized for reading, not display. */}
+      <p className="m-0 mb-5 max-w-[920px] font-display text-[clamp(22px,2.6vw,34px)] font-medium leading-[1.28] tracking-[-0.01em]">
+        {map.headlines.join(". ")}.
+      </p>
       {shownAnswer ? (
-        <div className="answer mb-6 max-w-[920px] font-display text-[clamp(20px,2.4vw,30px)] font-medium leading-[1.3]">
-          <ReactMarkdown>{shownAnswer}</ReactMarkdown>
+        <div className="answer mb-6 max-w-[760px] font-sans text-[15px] leading-[1.7] text-paper">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{shownAnswer}</ReactMarkdown>
         </div>
-      ) : (
-        <p className="m-0 mb-6 max-w-[920px] font-display text-[clamp(22px,2.6vw,34px)] font-medium leading-[1.28] tracking-[-0.01em]">
-          {map.headlines.join(". ")}.
-        </p>
-      )}
+      ) : null}
 
       <DeepDiveBlock map={map} done={!!shownAnswer} settlement={deep?.settlement} onResult={setDeep} />
 
@@ -198,8 +200,8 @@ function AttestBlock({ map }: { map: DistributionMap }) {
         </button>
       </div>
       <p className="m-0 font-mono text-[10px] leading-[1.6] text-mut2">
-        Writes a tamper-evident receipt to Mantle Sepolia whose hash commits to this exact result — a
-        provenance record of work done, <span className="text-mut">not</span> a self-awarded score.
+        Writes a tamper-evident receipt to the agent's on-chain ERC-8004 identity (Mantle) whose hash
+        commits to this exact result — a provenance record of work done, <span className="text-mut">not</span> a self-awarded score.
       </p>
 
       {res?.txHash ? (

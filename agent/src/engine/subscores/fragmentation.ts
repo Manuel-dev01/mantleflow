@@ -8,7 +8,8 @@ import type { SubScore } from "../types.js";
  * higher = better distribution (more, more-even venues): value = 100 − HHI/100.
  */
 export function fragmentationSubScore(liq: LiquidityResult): SubScore {
-  const v = liq.venues.filter((x) => x.liquidityUsd > 0);
+  // HHI over genuine SWAP venues only (yield/vault TVL isn't tradeable liquidity to fragment).
+  const v = liq.swapVenues.filter((x) => x.liquidityUsd > 0);
   const inputs: Sourced<unknown>[] = v.map((x) => ({ value: x, receipt: x.receipt }));
   if (v.length === 0) {
     return {
@@ -16,7 +17,7 @@ export function fragmentationSubScore(liq: LiquidityResult): SubScore {
       label: "Fragmentation (HHI)",
       status: "not-applicable",
       value: null,
-      explanation: "No liquidity to distribute — fragmentation is undefined.",
+      explanation: "No trading liquidity to distribute — fragmentation is undefined.",
       inputs,
     };
   }

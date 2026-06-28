@@ -116,15 +116,17 @@ function fmtUsdLocal(n: number): string {
 }
 
 export function overviewStats(map: DistributionMap): OverviewStats {
-  const reach = subOf(map, "reachability");
   const liq = liquidityOf(map);
   const comp = complianceOf(map);
 
-  const venueCount = reach?.inputs.length ?? 0;
-  const totalDepth = liq.reduce((s, v) => s + (v.liquidityUsd || 0), 0);
+  // Count + sum only genuine TRADING venues — yield/vault positions aren't exit liquidity.
+  const swapVenues = venuesOf(map).filter((v) => v.venueType === "swap");
+  const swapLiq = liq.filter((v) => v.venueType === "swap");
+  const venueCount = swapVenues.length;
+  const totalDepth = swapLiq.reduce((s, v) => s + (v.liquidityUsd || 0), 0);
 
   // Best (lowest) real $250k clearing slip across CPMM venues.
-  const slips = liq.map((v) => v.slipPctAt250k).filter((x): x is number => x != null);
+  const slips = swapLiq.map((v) => v.slipPctAt250k).filter((x): x is number => x != null);
   const bestSlip = slips.length ? Math.min(...slips) : null;
   const bestSlipVenue = liq.find((v) => v.slipPctAt250k != null && v.slipPctAt250k === bestSlip);
 
@@ -139,7 +141,7 @@ export function overviewStats(map: DistributionMap): OverviewStats {
     venues: {
       value: String(venueCount),
       tone: venueCount > 0 ? "paper" : "mut",
-      receipt: reach?.inputs[0]?.receipt,
+      receipt: swapVenues[0]?.receipt ?? subOf(map, "reachability")?.inputs[0]?.receipt,
     },
     depth: {
       value: totalDepth > 0 ? fmtUsdLocal(totalDepth) : "—",
@@ -170,7 +172,7 @@ const SLOTS = [
   { x: 60, y: 32 },
 ];
 
-export type NodeStatus = "deep" | "thin" | "gated" | "pending";
+export type NodeStatus = "deep" | "thin" | "gated" | "pending" | "bridge" | "yield";
 
 export interface MapNode {
   label: string;
@@ -182,14 +184,16 @@ export interface MapNode {
 }
 
 /**
- * Build radial nodes from REAL data: liquidity venues (deep/thin by USD), a Lendle collateral node,
- * a compliance "GATED" node, and ONE honest cross-chain placeholder (Phase 4 — not fabricated routes).
+ * Build radial nodes from REAL data: trading venues (deep/thin by USD), yield/vault positions
+ * (distinct, not exit liquidity), a Lendle collateral node, a compliance "GATED" node, and the
+ * cross-chain node(s) built from the actual computed routes (no "Phase 4" stub).
  */
 export function buildMapNodes(map: DistributionMap): MapNode[] {
   const liq = [...liquidityOf(map)].sort((a, b) => b.liquidityUsd - a.liquidityUsd);
   const nodes: MapNode[] = [];
 
-  for (const v of liq) {
+  // Genuine trading venues first (the only ones that read as tradeable depth).
+  for (const v of liq.filter((x) => x.venueType === "swap")) {
     const deep = v.method === "cpmm-exact" || v.liquidityUsd >= 1_000_000;
     nodes.push({
       label: v.venue.replace(/ ·\/.*$/, "").replace(/ pool$/i, ""),
@@ -201,12 +205,25 @@ export function buildMapNodes(map: DistributionMap): MapNode[] {
     });
   }
 
+  // Yield/vault positions — surfaced, but visually distinct (not somewhere you can sell into).
+  for (const v of liq.filter((x) => x.venueType === "yield")) {
+    nodes.push({
+      label: v.venue.replace(/ ·\/.*$/, "").replace(/ pool$/i, ""),
+      meta: `YIELD ${v.liquidityUsd > 0 ? fmtUsdLocal(v.liquidityUsd) : ""}`.trim(),
+      status: "yield",
+      x: 0,
+      y: 0,
+      receipt: v.receipt,
+    });
+  }
+
   const borrow = borrowOf(map);
   if (borrow?.value.listed) {
+    const frozen = borrow.value.isFrozen;
     nodes.push({
       label: "Lendle",
-      meta: borrow.value.usageAsCollateralEnabled ? `COLLATERAL ${borrow.value.ltvPct}%` : "LISTED",
-      status: borrow.value.usageAsCollateralEnabled ? "deep" : "thin",
+      meta: frozen ? "FROZEN" : borrow.value.usageAsCollateralEnabled ? `COLLATERAL ${borrow.value.ltvPct}%` : "LISTED",
+      status: frozen ? "thin" : borrow.value.usageAsCollateralEnabled ? "deep" : "thin",
       x: 0,
       y: 0,
       receipt: borrow.receipt,
@@ -225,10 +242,29 @@ export function buildMapNodes(map: DistributionMap): MapNode[] {
     });
   }
 
-  // Honest cross-chain placeholder — Phase 4 will fill real bridge/CCIP routes.
-  nodes.push({ label: "Cross-chain", meta: "PHASE 4", status: "pending", x: 0, y: 0 });
+  // Cross-chain — built from the REAL computed routes (D21), not a placeholder.
+  const xc = routesOf(map);
+  const available = xc.routes.filter((r) => r.available);
+  if (available.length > 0) {
+    for (const r of available) {
+      nodes.push({
+        label: r.protocol.replace(/-OFT$/, ""),
+        meta: "BRIDGE",
+        status: "bridge",
+        x: 0,
+        y: 0,
+        receipt: r.receipt,
+      });
+    }
+  } else if (xc.routes.length > 0) {
+    // Probed both channels, none available — a real "no permissionless bridge" finding.
+    nodes.push({ label: "Cross-chain", meta: "NO ROUTE", status: "gated", x: 0, y: 0, receipt: xc.routes[0]?.receipt });
+  } else {
+    // Not sourced this run (transient) — honest peripheral node, never a fabricated route.
+    nodes.push({ label: "Cross-chain", meta: "not sourced", status: "pending", x: 0, y: 0 });
+  }
 
-  // Assign slots (cap at 9); place the pending node in a far slot so it reads as peripheral.
+  // Assign slots (cap at 9).
   return nodes.slice(0, SLOTS.length).map((n, i) => ({ ...n, ...SLOTS[i] }));
 }
 
@@ -251,6 +287,10 @@ export function nodeStyle(status: NodeStatus): {
       return { stroke: "#6F6F68", width: 1.4, dash: "0", opacity: 0.45, flow: false, fill: "transparent", border: "2px solid #6F6F68", mark: "", labelTone: "paper" };
     case "gated":
       return { stroke: "#6F6F68", width: 1.6, dash: "4 4", opacity: 0.55, flow: false, fill: "transparent", border: "2px solid #6F6F68", mark: "✕", labelTone: "mut" };
+    case "bridge":
+      return { stroke: "#C8F24E", width: 2, dash: "6 4", opacity: 0.9, flow: true, fill: "transparent", border: "2px solid #C8F24E", mark: "⤳", labelTone: "paper" };
+    case "yield":
+      return { stroke: "#6F6F68", width: 1.2, dash: "1 5", opacity: 0.4, flow: false, fill: "transparent", border: "2px dotted #6F6F68", mark: "%", labelTone: "mut" };
     case "pending":
       return { stroke: "#6F6F68", width: 1.2, dash: "2 6", opacity: 0.35, flow: false, fill: "transparent", border: "2px dashed #6F6F68", mark: "·", labelTone: "mut2" };
   }

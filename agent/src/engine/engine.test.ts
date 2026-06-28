@@ -12,7 +12,7 @@ const asset = {
 const ts = "2026-06-26T00:00:00.000Z";
 const rcpt = { sourceName: "test", url: "", observedAt: ts, kind: "fact" as const };
 
-const emptyLiquidity: LiquidityResult = { venues: [], totalLiquidityUsd: 0, totalDepthUsdAt2pct: 0 };
+const emptyLiquidity: LiquidityResult = { venues: [], swapVenues: [], yieldVenues: [], totalLiquidityUsd: 0, totalDepthUsdAt2pct: 0 };
 const notListed = (): { value: LendleReserve; receipt: typeof rcpt } => ({
   value: {
     listed: false,
@@ -35,7 +35,7 @@ describe("assembleDistributionMap", () => {
   it("MI4-like: no venue + gated + not borrowable → low composite, headline findings", () => {
     const input: AssembleInput = {
       asset,
-      reachability: { venues: [], noSecondaryMarket: true },
+      reachability: { venues: [], swapVenues: [], yieldVenues: [], noSecondaryMarket: true },
       liquidity: emptyLiquidity,
       borrow: notListed(),
       compliance: {
@@ -46,7 +46,7 @@ describe("assembleDistributionMap", () => {
     };
     const map = assembleDistributionMap(input);
 
-    expect(map.headlines).toContain("No on-chain secondary venue found");
+    expect(map.headlines).toContain("No on-chain secondary trading venue found");
     expect(map.headlines.some((h) => h.includes("gated"))).toBe(true);
     expect(map.headlines).toContain("Not borrowable on Lendle");
 
@@ -65,7 +65,7 @@ describe("assembleDistributionMap", () => {
   it("undetermined compliance → insufficient-data, never a false 'freely transferable'", () => {
     const map = assembleDistributionMap({
       asset,
-      reachability: { venues: [], noSecondaryMarket: true },
+      reachability: { venues: [], swapVenues: [], yieldVenues: [], noSecondaryMarket: true },
       liquidity: emptyLiquidity,
       borrow: notListed(),
       compliance: { value: { determined: false, isGated: false, mechanism: null, evidence: [] }, receipt: rcpt },
@@ -78,18 +78,24 @@ describe("assembleDistributionMap", () => {
   });
 
   it("liquid asset: venues + collateral → higher composite", () => {
+    const swapV = [
+      { venue: "Merchant Moe ·/USDC", liquidityUsd: 5_000_000, depthUsdAt2pct: 49_750, slipPctAt250k: 4.76, method: "cpmm-exact" as const, venueType: "swap" as const, receipt: rcpt },
+      { venue: "Agni pool", liquidityUsd: 3_000_000, depthUsdAt2pct: null, slipPctAt250k: null, method: "tvl-proxy" as const, venueType: "swap" as const, receipt: rcpt },
+    ];
     const liquidity: LiquidityResult = {
-      venues: [
-        { venue: "Merchant Moe ·/USDC", liquidityUsd: 5_000_000, depthUsdAt2pct: 49_750, slipPctAt250k: 4.76, method: "cpmm-exact", receipt: rcpt },
-        { venue: "Agni pool", liquidityUsd: 3_000_000, depthUsdAt2pct: null, slipPctAt250k: null, method: "tvl-proxy", receipt: rcpt },
-      ],
+      venues: swapV,
+      swapVenues: swapV,
+      yieldVenues: [],
       totalLiquidityUsd: 8_000_000,
       totalDepthUsdAt2pct: 49_750,
     };
+    const reachV = [{ venue: "Merchant Moe ·/USDC", kind: "dex-pair" as const, venueType: "swap" as const, receipt: rcpt }];
     const input: AssembleInput = {
       asset: { ...asset, symbol: "mETH", name: "Mantle Staked Ether" },
       reachability: {
-        venues: [{ venue: "Merchant Moe ·/USDC", kind: "dex-pair", receipt: rcpt }],
+        venues: reachV,
+        swapVenues: reachV,
+        yieldVenues: [],
         noSecondaryMarket: false,
       },
       liquidity,
