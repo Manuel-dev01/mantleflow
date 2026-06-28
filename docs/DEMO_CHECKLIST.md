@@ -20,7 +20,9 @@
 
 ## 3. Overview tab
 - [ ] Headline (display font) + composite + 4 stats render; VENUES counts **trading venues only**.
-- [ ] mETH: VENUES = 0, DEPTH = —, HOLDING = OPEN (compliance resolved). MI4: HOLDING = GATED.
+- [ ] mETH: VENUES = 0, DEPTH = —, HOLDING = BLOCKABLE (account blocklist). MI4: HOLDING = GATED.
+      USDe: HOLDING = OPEN. No asset shows UNVERIFIED or a "0/100" composite (composite is "—" if <3
+      sub-scores compute).
 - [ ] After a paid deep-dive (see §7), the LLM answer renders **markdown tables as real tables** and
       lists/headings cleanly, at a readable size (not giant display font).
 - [ ] Source receipts resolve on each stat.
@@ -45,8 +47,9 @@
       with both LayerZero-OFT and CCIP shown "not available", cost "not quoted".
 
 ## 7. Gates tab
-- [ ] MI4 → STATUS GATED + mechanism "Securitize DS-Token transfer-agent allowlist" + on-chain evidence.
-- [ ] USDY → GATED (Ondo blocklist hook). mETH → FREELY TRANSFERABLE.
+- [ ] MI4 → STATUS GATED (permissioned · Securitize allowlist) + on-chain evidence.
+- [ ] mETH/fBTC/USDY → BLOCKABLE (account blocklist); cmETH → BLOCKABLE (sanctions screening);
+      USDe → FREELY TRANSFERABLE. Mechanism named on each; "BLOCKABLE" ≠ MI4's "GATED" allowlist.
 - [ ] mETH: the "Lendle reserve is FROZEN" warning is present **and** borrowability scores low (≈20),
       not 91 — the two no longer contradict.
 - [ ] Jurisdiction-omission note present.
