@@ -197,12 +197,16 @@ Desktop/CLI agent can install the skill and query Mantle distribution.
   `ownerOf(309)`/`tokenURI(309)` read back the wallet + the AgentCard URL). Sepolia registries (on-chain
   verified): Identity `0x8004A818BFB912233c491871b3d84c89A494BD9e`, Reputation
   `0x8004B663056A597Dffe9eCcC1965A193B7388713`.
-- **Dual-network → mainnet** (decision **D23**): the identity stack is network-selectable (the same
-  agent key, the same code path) and is moving to **Mantle mainnet** registries
-  (`0x8004A169…`/`0x8004BAa1…`) for the strongest verifiable identity, while x402 stays on Sepolia
-  (D22). The flip is the final deploy step — register a new mainnet agentId, set `ERC8004_NETWORK=mainnet`
-  + the new `AGENT_ID`, after confirming the mainnet registries emit the same event topic0 as Sepolia.
-  Until then the live identity reads Sepolia #309 (so the deployment never breaks).
+- **Dual-network → mainnet, registered** (decision **D23**): the identity stack is network-selectable
+  (same agent key, same code path) and the agent is now **registered on Mantle mainnet as agentId
+  `141`** (register tx `0x7a210524…`; `ownerOf(141)`/`tokenURI(141)` read back the wallet + AgentCard),
+  using the mainnet registries `0x8004A169…`/`0x8004BAa1…`. x402 stays on Sepolia (D22). The
+  **verification gate passed**: a live provenance write on mainnet (tx `0xa32b40e2…`) was independently
+  re-verified by decoding its `MetadataSet` event topic0 against the mainnet Identity registry
+  (`verified: true`) — confirming the mainnet registry emits the same event signature as Sepolia, so
+  attest/verify works identically there. The only remaining step is operational: set
+  `ERC8004_NETWORK=mainnet` + `AGENT_ID=141` on Vercel and deploy; until then the live site safely
+  reads Sepolia #309.
 - **The AgentCard** is served at `https://mantleflow.vercel.app/.well-known/agent-card.json` — the
   exact `agentURI` registered on-chain.
 - **Provenance, not self-rating** (decision **D16**): we discovered live that the deployed Reputation
@@ -292,7 +296,8 @@ Stating these is part of the accuracy discipline — a judge should see the boun
   existence, never an invented fee. Issuer-specific bridges we don't probe are not claimed either way.
 - **x402 runs on Mantle Sepolia testnet**, clearly labelled; tmUSD is a valueless test token. Mainnet
   USDC + the QuestFlow facilitator are env-switchable, pending the gated facilitator key. The
-  **ERC-8004 identity is moving to mainnet** (D23); until that flip it reads Sepolia #309.
+  **ERC-8004 identity is registered on Mantle mainnet** (agentId 141, parity-confirmed, D23); the live
+  site reads it once `ERC8004_NETWORK`/`AGENT_ID` are set on Vercel (until then, Sepolia #309).
 - **The Research Challenge's own rubric/submission page** was not web-indexed at build time
   (`VERIFIED.md` §6.1); the writeup is built to the brief's stated judging axes (quality, accuracy,
   originality, depth) and the four non-negotiable outcomes.
@@ -321,10 +326,12 @@ Stating these is part of the accuracy discipline — a judge should see the boun
 |------|-------|
 | Live tool | https://mantleflow.vercel.app |
 | AgentCard | https://mantleflow.vercel.app/.well-known/agent-card.json |
-| Agent identity (ERC-8004) | agentId **309**, wallet `0x8974881E39a5eF62214929B6CaA6EC0C6e7D47c7` |
-| Register tx | `0x107ba4b249c7ec9794f4418c0032b4909d3edad59a0b275e06c9a31d319d5b88` |
-| Provenance (setMetadata) tx | `0x021ce501da2e2e35391fc83e99ae5f03b08e352ad5c6c09fece7294dc20ee2a4` |
-| Third-party reputation tx | `0x40ec59da35e7b01f774fd1828b899c3d7a7250fc9e903cd726567003358a6dc3` |
+| Agent wallet | `0x8974881E39a5eF62214929B6CaA6EC0C6e7D47c7` |
+| Agent identity — **mainnet** | agentId **141**, register tx `0x7a210524cb616b4731b6a95debaac1bcbfa4071abf90eff08b4dc1a7dea802e0` |
+| Provenance — mainnet (parity gate) | `0xa32b40e25f15553062c0871ebcc374a2959856caddf2e361cd39d79f8114a4ff` (verified ✓) |
+| Agent identity — Sepolia (prior) | agentId **309**, register tx `0x107ba4b249c7ec9794f4418c0032b4909d3edad59a0b275e06c9a31d319d5b88` |
+| Provenance — Sepolia | `0x021ce501da2e2e35391fc83e99ae5f03b08e352ad5c6c09fece7294dc20ee2a4` |
+| Third-party reputation tx (Sepolia) | `0x40ec59da35e7b01f774fd1828b899c3d7a7250fc9e903cd726567003358a6dc3` |
 | x402 token (tmUSD, Sepolia) | `0x246e485a5966b19871f3e9297182f8cb49fd8242` |
 | tmUSD deploy tx | `0x486276b9fdc2661fe5c8d7e4313f3a92d78a1fc5afa8e1602c500b6171a86c60` |
 | x402 self-settle tx | `0xc01c89ddf1ebc10fa246e68bba442863455c8e18c6c6257088e1bb14f9e6910a` |

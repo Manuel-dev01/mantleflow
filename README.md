@@ -39,8 +39,9 @@ A finding of *"no secondary market"* or *"holder is gated"* is a headline result
   datum source-receipted, the composite labelled with exactly which sub-scores it includes.
 - **AI Agent Skill** (the bonus) — `skill/mantleflow-distribution/` (open `SKILL.md` format) wrapping
   the **MCP server** (`/mcp`, stdio).
-- **ERC-8004 identity** — agentId **309** (Sepolia today; **dual-network**, moving to Mantle mainnet —
-  the final flip is an env change after a funded mainnet registration, D23); per-analysis provenance
+- **ERC-8004 identity** — **registered on Mantle mainnet as agentId `141`** (dual-network; topic0
+  parity confirmed via a live attest→verify round-trip, D23); the live site reads it once
+  `ERC8004_NETWORK`/`AGENT_ID` are set on Vercel (Sepolia #309 until then). Per-analysis provenance
   via `Identity.setMetadata` (content-addressed `keccak256` receipts, tx-receipt-verifiable); genuine
   third-party reputation (visitors rate from their own wallet — self-rating is forbidden on-chain).
 - **x402 pay-per-query live** — real HTTP 402 + EIP-3009 `transferWithAuthorization`, self-settled

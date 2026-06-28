@@ -195,12 +195,22 @@ Remaining open items are tracked in §6 (non-blocking).
   returns **20** (was ~91 from LTV) so it no longer contradicts the on-chain frozen flag. (D25.)
 - **Live engine read (2026-06-27, post-fix):** MI4 → composite **5** (gated + no trading venue + not
   borrowable); mETH → composite **34** (reachability 0, borrowability 20 frozen, compliance 90 open).
-- **Dual-network capability** — ERC-8004 identity/provenance/reputation are now network-selectable via
+- **Dual-network capability** — ERC-8004 identity/provenance/reputation are network-selectable via
   `ERC8004_NETWORK` (independent of `x402Network`, which stays Sepolia). Mainnet registries (§3) are
-  wired. **Default `sepolia`** until a mainnet agentId is registered (keeps the live site on #309). The
-  mainnet flip (D23) requires: fund the agent wallet with real mainnet MNT → register a new mainnet
-  agentId → set `ERC8004_NETWORK=mainnet` + new `AGENT_ID` → confirm mainnet topic0 parity before
-  trusting reads. **Pending: mainnet MNT funding.**
+  wired. **Code default `sepolia`** so the live deployment never breaks before the env is flipped.
+- **MAINNET IDENTITY REGISTERED + topic0 parity CONFIRMED (2026-06-27)** — agent wallet funded 2.2 MNT;
+  **registered agentId `141` on Mantle mainnet (5000)**, register tx
+  `0x7a210524cb616b4731b6a95debaac1bcbfa4071abf90eff08b4dc1a7dea802e0`. `ownerOf(141)` = agent wallet
+  `0x8974881E39a5eF62214929B6CaA6EC0C6e7D47c7`, `tokenURI(141)` = the AgentCard URL. Provenance write
+  (MI4 result, `setMetadata`) tx `0xa32b40e25f15553062c0871ebcc374a2959856caddf2e361cd39d79f8114a4ff`
+  (block 97263717) — **`verifyAttestation` decoded the MetadataSet event by topic0 against the mainnet
+  Identity registry and returned `verified: true`**, proving the mainnet registry emits the SAME
+  `MetadataSet` topic0 as Sepolia (the D23 verification gate). Reputation read path returns count 0
+  (no third-party feedback yet) without error. resultHash(MI4) at registration:
+  `0x29f4b0e2929eff8bc80decca76a76d9e11937ffe2b3e254c43e819e56d6126db`.
+- **Go-live (owner action):** set on Vercel (Production) **BOTH** `ERC8004_NETWORK=mainnet` and
+  `AGENT_ID=141` (they must change together — `AGENT_ID` 309 is a Sepolia id), then deploy the
+  dual-network code. Sepolia agentId 309 + its registries remain valid for reference.
 
 ## §6. Open items to close (non-blocking for architecture lock)
 
