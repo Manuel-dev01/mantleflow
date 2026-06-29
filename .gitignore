@@ -28,3 +28,9 @@ coverage/
 *.tsbuildinfo
 
 .vercel
+
+# internal working docs — kept on disk, excluded from the public submission
+/CLAUDE.md
+/PROJECT_BRIEF.md
+docs/DEMO_CHECKLIST.md
+docs/DEMO_SCRIPT.md
