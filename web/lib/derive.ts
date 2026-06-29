@@ -204,7 +204,7 @@ export interface MapNode {
 /**
  * Build radial nodes from REAL data: trading venues (deep/thin by USD), yield/vault positions
  * (distinct, not exit liquidity), a Lendle collateral node, a compliance "GATED" node, and the
- * cross-chain node(s) built from the actual computed routes (no "Phase 4" stub).
+ * cross-chain node(s) built from the actual computed routes.
  */
 export function buildMapNodes(map: DistributionMap): MapNode[] {
   const liq = [...liquidityOf(map)].sort((a, b) => b.liquidityUsd - a.liquidityUsd);

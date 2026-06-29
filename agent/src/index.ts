@@ -3,7 +3,7 @@
  *
  * This package holds the orchestrator, data adapters, the Distribution Score engine, the
  * x402 middleware, and the ERC-8004 client. It is consumed by the Next.js web API routes
- * and by the MCP server entrypoint. Phase 0 scaffold: configuration + the accuracy invariant.
+ * and by the MCP server entrypoint. Provides configuration and the accuracy invariant.
  */
 
 export * from "./types/source-receipt.js";

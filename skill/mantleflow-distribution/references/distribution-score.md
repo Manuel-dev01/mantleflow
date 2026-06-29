@@ -1,8 +1,8 @@
 # Distribution Score — methodology & provenance
 
-The composite is a **weighted partial mean** over the *computed* sub-scores (cross-chain excluded
-until Phase 4), always labelled as partial. The engine refuses to emit a composite without its
-sub-scores, and refuses to invent a sub-score it cannot source.
+The composite is a **weighted partial mean** over the *computed* sub-scores — any the engine cannot
+source are excluded and the composite is labelled partial. The engine refuses to emit a composite
+without its sub-scores, and refuses to invent a sub-score it cannot source.
 
 ## Sub-score derivations
 

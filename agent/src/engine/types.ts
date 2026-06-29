@@ -2,7 +2,7 @@ import type { Sourced, SourceReceipt } from "../types/source-receipt.js";
 
 /**
  * The Distribution Score engine's output types. Each sub-score is sourced and drillable.
- * Phase 1 computes `reachability` and `compliance`; the rest are honestly `not-yet-computed`
+ * Any sub-score the engine cannot source is reported `not-yet-computed` rather than guessed,
  * so the agent never fabricates depth/borrow/route numbers.
  */
 
@@ -57,7 +57,7 @@ export interface DistributionMap {
   subScores: SubScore[];
   /** Composite 0..100 (weighted mean over computed sub-scores), or null when none computed. */
   composite: number | null;
-  /** How the composite was derived (e.g. "partial — excludes cross-chain (Phase 4)"). */
+  /** How the composite was derived (e.g. "partial — excludes cross-chain (insufficient data)"). */
   compositeNote?: string;
   /** Headline research findings — absences are signal (e.g. "No on-chain secondary venue"). */
   headlines: string[];

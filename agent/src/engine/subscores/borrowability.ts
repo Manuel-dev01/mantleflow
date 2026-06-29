@@ -27,7 +27,7 @@ export function borrowabilitySubScore(reserve: Sourced<LendleReserve>): SubScore
       status: "computed",
       value: 0,
       explanation:
-        "Not listed on Lendle — cannot be supplied, borrowed, or used as collateral there. (Phase 2 reads Lendle only.)",
+        "Not listed on Lendle — cannot be supplied, borrowed, or used as collateral there. (Lendle is the only lending market currently read.)",
       inputs,
     };
   }

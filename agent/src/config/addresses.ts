@@ -33,7 +33,7 @@ export const USDC_MANTLE_MAINNET: Address =
   "0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9";
 
 /**
- * Tracked Mantle RWA / capital-market assets. MI4 is the Phase-1 centerpiece.
+ * Tracked Mantle RWA / capital-market assets. MI4 is the centerpiece.
  * Securitize is MI4's transfer agent — its token is a proxy whose compliance/transfer
  * restriction logic lives in the implementation contract (the gating signal we detect).
  */

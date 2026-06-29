@@ -3,7 +3,7 @@ import type { Address } from "viem";
 /**
  * Mantle DEX factories used for secondary-market reachability checks.
  * Addresses from official docs (primary source) — recorded as candidates, and the
- * reachability module confirms `getCode` at runtime before trusting a result. Phase 2 adds Agni.
+ * reachability module confirms `getCode` at runtime before trusting a result.
  */
 export interface DexFactory {
   name: string;

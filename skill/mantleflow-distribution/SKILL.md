@@ -48,7 +48,8 @@ Do **not** use it for: token minting/issuance mechanics, price forecasts, or non
 4. **Borrowability** — Lendle collateral factor / rates / utilization.
 5. **Compliance gating** — the detected on-chain mechanism (e.g. Securitize DS-Token allowlist,
    ERC-1404, blocklist). An absence of a market or a holder gate is a *headline finding*, not a gap.
-6. **Cross-chain reach** — roadmap (Phase 4); reported honestly as not-yet-computed.
+6. **Cross-chain reach** — verified bridge channels (LayerZero OFT / Chainlink CCIP); reported as
+   insufficient-data when no channel is verified.
 
 ## Accuracy invariant
 

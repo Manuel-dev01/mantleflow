@@ -47,7 +47,7 @@ server.tool(
 server.tool(
   "get_distribution_map",
   "Compute the live Distribution Score map for one tracked asset (reachability, liquidity depth, " +
-    "fragmentation, borrowability, compliance gate; cross-chain is Phase 4). Every datum is sourced.",
+    "fragmentation, borrowability, compliance gate, cross-chain reach). Every datum is sourced.",
   { symbol: z.string().describe("tracked symbol, e.g. MI4, mETH, fBTC, USDe, USDY, cmETH") },
   async ({ symbol }) => asText({ map: await caps.buildDistributionMap(symbol) }),
 );
