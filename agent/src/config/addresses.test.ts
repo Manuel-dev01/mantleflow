@@ -8,7 +8,7 @@ describe("verified addresses are well-formed", () => {
     for (const net of ["mainnet", "sepolia"] as const) {
       expect(ERC8004[net].identity).toMatch(ADDRESS_RE);
       expect(ERC8004[net].reputation).toMatch(ADDRESS_RE);
-      // Validation registry is intentionally absent on Mantle (verified 2026-06-25).
+      // Validation registry is intentionally absent on Mantle.
       expect(ERC8004[net].validation).toBeNull();
     }
   });

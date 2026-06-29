@@ -1,14 +1,13 @@
 /**
- * Register MantleFlow's ERC-8004 agent identity on `ERC8004_NETWORK` (mainnet by default; D23 dual-
+ * Register MantleFlow's ERC-8004 agent identity on `ERC8004_NETWORK` (mainnet by default; dual-
  * network). Idempotent at the script level: if AGENT_ID is already set, it just reads/prints it.
  *
  * Run (owner, with a funded agent key in agent/.env):
  *   ERC8004_NETWORK=mainnet pnpm -C agent exec tsx src/scripts/register-identity.ts
  *
  * NOTE: registering a NEW agentId on mainnet requires AGENT_ID to be UNSET (309 is a Sepolia id).
- * After a fresh registration, record the printed agentId in:
+ * After a fresh registration, set the printed agentId in:
  *   - agent/.env  + web/.env.local  + Vercel env  →  AGENT_ID=<id> (+ ERC8004_NETWORK=mainnet)
- *   - docs/VERIFIED.md (agentId + tx hash + date)
  */
 import "dotenv/config";
 import { loadConfig } from "../config/env.js";
@@ -51,8 +50,7 @@ async function main() {
   console.log("  agentId:", res.agentId);
   console.log("  tx:", res.txHash);
   console.log("  explorer:", res.receipt.url);
-  console.log("\nNEXT: set AGENT_ID=" + res.agentId + " in agent/.env, web/.env.local, and Vercel env;");
-  console.log("      record agentId + tx in docs/VERIFIED.md.");
+  console.log("\nNEXT: set AGENT_ID=" + res.agentId + " in agent/.env, web/.env.local, and Vercel env.");
 }
 
 main().catch((e) => {

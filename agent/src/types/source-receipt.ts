@@ -2,9 +2,9 @@
  * SourceReceipt — the accuracy invariant of MantleFlow.
  *
  * Every externally-sourced datum (an on-chain read, an API figure, an oracle price)
- * MUST be wrapped in a SourceReceipt so the UI and the research writeup can show a
- * judge exactly where a number came from, when, and whether it is a hard fact, an
- * estimate, or a working assumption. No number ships without one. See docs/DECISIONS.md #5.
+ * MUST be wrapped in a SourceReceipt so the UI can show exactly where a number came
+ * from, when, and whether it is a hard fact, an estimate, or a working assumption.
+ * No number ships without one.
  */
 
 /** Whether a value is a hard fact, a computed/derived estimate, or an unproven assumption. */

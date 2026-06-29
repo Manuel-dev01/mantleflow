@@ -1,7 +1,7 @@
 /**
  * Minimal ERC-8004 ABIs — only the methods MantleFlow calls. Signatures are from the EIP-8004 spec
- * (https://eips.ethereum.org/EIPS/eip-8004, confirmed 2026-06-27) and confirmed against the deployed
- * Mantle Sepolia registries by on-chain simulation before any write (D6 address-trust rule).
+ * (https://eips.ethereum.org/EIPS/eip-8004) and confirmed against the deployed Mantle Sepolia
+ * registries by on-chain simulation before any write (address-trust rule).
  *
  * Identity is ERC-721: an agent is an NFT (`agentId` = token id). Reputation feedback is given by a
  * client address about an agentId; MantleFlow uses it to write tamper-evident PROVENANCE receipts

@@ -4,7 +4,7 @@ import { type MantleNetwork } from "../config/chains.js";
 import { type Sourced, sourced } from "../types/source-receipt.js";
 
 /**
- * Mantlescan via the unified Etherscan API V2 (V1 is deprecated, 2026-06-25 — see VERIFIED.md).
+ * Mantlescan via the unified Etherscan API V2 (V1 is deprecated).
  * One endpoint, `chainid` selects the network: 5000 mainnet, 5003 Sepolia.
  */
 const V2_BASE = "https://api.etherscan.io/v2/api";

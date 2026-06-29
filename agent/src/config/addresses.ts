@@ -2,8 +2,8 @@ import type { Address } from "viem";
 
 /**
  * Contract addresses used by MantleFlow. Every address here is ON-CHAIN VERIFIED
- * (eth_getCode + a read) on 2026-06-25 — see docs/VERIFIED.md. Per docs/DECISIONS.md #6,
- * no address is write-trusted until it has been confirmed on-chain; these have been.
+ * (eth_getCode + a read). No address is write-trusted until it has been confirmed
+ * on-chain; these have been.
  */
 
 export interface Erc8004Registries {
@@ -11,7 +11,7 @@ export interface Erc8004Registries {
   identity: Address;
   /** ERC-8004 Reputation Registry. Confirmed: deployed ERC-1967 proxy. */
   reputation: Address;
-  /** ERC-8004 Validation Registry — NOT deployed on Mantle as of 2026-06-25. */
+  /** ERC-8004 Validation Registry — NOT deployed on Mantle. */
   validation: Address | null;
 }
 
@@ -28,7 +28,7 @@ export const ERC8004: Record<"mainnet" | "sepolia", Erc8004Registries> = {
   },
 };
 
-/** USDC on Mantle mainnet (EIP-3009 capable) — x402 settlement asset. Verified 2026-06-25. */
+/** USDC on Mantle mainnet (EIP-3009 capable) — x402 settlement asset. */
 export const USDC_MANTLE_MAINNET: Address =
   "0x09Bc4E0D864854c6aFB6eB9A9cdF58aC190D0dF9";
 
@@ -46,7 +46,6 @@ export interface TrackedAsset {
   issuer?: string;
   /** True if the deployed token is a proxy (impl holds the real logic — inspect it for gates). */
   isProxy?: boolean;
-  verifiedAt: string; // ISO date the address+metadata were on-chain confirmed
 }
 
 export const TRACKED_ASSETS: Record<string, TrackedAsset> = {
@@ -57,19 +56,15 @@ export const TRACKED_ASSETS: Record<string, TrackedAsset> = {
     address: "0x671642ac281c760e34251d51bc9eef27026f3b7a",
     decimals: 6,
     issuer: "Securitize (transfer agent) / Mantle Guard Ltd",
-    isProxy: true,
-    verifiedAt: "2026-06-25",
-  },
-  // Phase 2 assets — all on-chain verified (getCode + price) 2026-06-26. See docs/VERIFIED.md §8.
+    isProxy: true,  },
+  // Additional tracked assets — all on-chain verified (getCode + price).
   mETH: {
     symbol: "mETH",
     name: "Mantle Staked Ether",
     network: "mainnet",
     address: "0xcDA86A272531e8640cD7F1a92c01839911B90bb0",
     decimals: 18,
-    issuer: "mETH Protocol (Mantle)",
-    verifiedAt: "2026-06-26",
-  },
+    issuer: "mETH Protocol (Mantle)",  },
   cmETH: {
     symbol: "cmETH",
     name: "Mantle Restaked ETH",
@@ -77,27 +72,21 @@ export const TRACKED_ASSETS: Record<string, TrackedAsset> = {
     address: "0xE6829d9a7eE3040e1276Fa75293Bde931859e8fA",
     decimals: 18,
     issuer: "mETH Protocol (Mantle)",
-    isProxy: true,
-    verifiedAt: "2026-06-26",
-  },
+    isProxy: true,  },
   fBTC: {
     symbol: "fBTC",
     name: "FunctionBTC",
     network: "mainnet",
     address: "0xC96dE26018A54D51c097160568752c4E3BD6C364",
     decimals: 8,
-    issuer: "Function (Galaxy/Antalpha-backed omnichain BTC)",
-    verifiedAt: "2026-06-26",
-  },
+    issuer: "Function (Galaxy/Antalpha-backed omnichain BTC)",  },
   USDe: {
     symbol: "USDe",
     name: "Ethena USDe",
     network: "mainnet",
     address: "0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34",
     decimals: 18,
-    issuer: "Ethena (OFT)",
-    verifiedAt: "2026-06-26",
-  },
+    issuer: "Ethena (OFT)",  },
   USDY: {
     symbol: "USDY",
     name: "Ondo US Dollar Yield",
@@ -105,14 +94,12 @@ export const TRACKED_ASSETS: Record<string, TrackedAsset> = {
     address: "0x5bE26527e817998A7206475496fDE1E68957c5A6",
     decimals: 18,
     issuer: "Ondo Finance (blocklist transfer hook)",
-    isProxy: true,
-    verifiedAt: "2026-06-26",
-  },
-  // NOTE: syrupUSDT (Maple) is intentionally NOT tracked — Maple withdrew it from Aave-on-Mantle
-  // ~2026-04-20. Recorded as a thesis finding ("an RWA that left Mantle"), not an omission.
+    isProxy: true,  },
+  // NOTE: syrupUSDT (Maple) is intentionally NOT tracked — Maple withdrew it from Aave-on-Mantle.
+  // Recorded as a thesis finding ("an RWA that left Mantle"), not an omission.
 };
 
-/** Lendle (Aave-v2 fork) — Mantle borrowability source. On-chain verified 2026-06-26. */
+/** Lendle (Aave-v2 fork) — Mantle borrowability source. On-chain verified. */
 export const LENDLE = {
   lendingPool: "0xCFa5aE7c2CE8Fadc6426C1ff872cA45378Fb7cF3" as Address,
   protocolDataProvider: "0x552b9e4bae485C4B7F540777d7D25614CdB84773" as Address,

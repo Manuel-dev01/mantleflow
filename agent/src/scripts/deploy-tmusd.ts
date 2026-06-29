@@ -36,7 +36,7 @@ async function main() {
   console.log("\n✓ tmUSD deployed at:", receipt.contractAddress);
   console.log("  block:", receipt.blockNumber.toString());
   console.log("  explorer:", `https://explorer.sepolia.mantle.xyz/address/${receipt.contractAddress}`);
-  console.log("\nNEXT: set X402_ASSET=" + receipt.contractAddress + " in env + Vercel; record in VERIFIED.md.");
+  console.log("\nNEXT: set X402_ASSET=" + receipt.contractAddress + " in env + Vercel.");
 }
 
 main().catch((e) => {

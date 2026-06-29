@@ -42,7 +42,7 @@ export type VenueType = "swap" | "yield";
  * Known DEX/AMM project slugs on Mantle (DefiLlama `project`). Used ONLY as a fallback when the
  * `exposure` field is missing — the primary signal is `exposure` ("multi" ⇒ a real 2-sided trading
  * pool; "single" ⇒ a single-asset yield/lending/vault deposit, not somewhere you can sell into).
- * Verified against live DefiLlama Mantle data 2026-06-27 (the only `multi` project there is
+ * Verified against live DefiLlama Mantle data (the only `multi` project there is
  * fluxion-network; aave-v3 / woofi-earn / circuit-protocol / ondo-yield-assets / clearpool-lending
  * are all `single` = yield).
  */

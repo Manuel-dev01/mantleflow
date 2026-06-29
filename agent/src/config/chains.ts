@@ -9,7 +9,7 @@ import {
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 
 /**
- * Mantle network configuration. Values verified in docs/VERIFIED.md (2026-06-25):
+ * Mantle network configuration. Values verified on-chain:
  * mainnet chainId 5000, Sepolia chainId 5003. Gas token MNT.
  */
 export const MANTLE_MAINNET_RPC = "https://rpc.mantle.xyz";

@@ -11,12 +11,12 @@ import type { SourceReceipt } from "../types/source-receipt.js";
  * finding, not a gap. Costs are NOT fabricated: CCIP/LZ fees are per-tx dynamic ("not quoted").
  */
 
-// Canonical LayerZero V2 EndpointV2 (same address across chains; confirmed on Mantle 2026-06-27 via
-// cmETH/USDe `endpoint()`). docs/VERIFIED.md §9.
+// Canonical LayerZero V2 EndpointV2 (same address across chains; confirmed on Mantle on-chain via
+// cmETH/USDe `endpoint()`).
 const LZ_V2_ENDPOINT = "0x1a44076050125825900e736c501f859c50fE728c";
 
-// Mantle's CCIP token set carries LINK / USDC / USDT / wstETH / W0G (Chainlink CCIP directory,
-// checked 2026-06-27) — none of our tracked RWAs. Sourced static fact (the set is stable).
+// Mantle's CCIP token set carries LINK / USDC / USDT / wstETH / W0G (Chainlink CCIP directory)
+// — none of our tracked RWAs. Sourced static fact (the set is stable).
 const CCIP_DIRECTORY_URL = "https://docs.chain.link/ccip/directory/mainnet/chain/ethereum-mainnet-mantle-1";
 const CCIP_MANTLE_TOKENS = new Set(["LINK", "USDC", "USDT", "wstETH", "W0G"].map((s) => s.toUpperCase()));
 
@@ -99,7 +99,7 @@ export async function findCrossChainRoutes(
       url: CCIP_DIRECTORY_URL,
       observedAt,
       kind: "fact",
-      note: "Mantle CCIP token set checked 2026-06-27",
+      note: "Mantle CCIP token set membership (Chainlink directory)",
     },
   });
 

@@ -25,25 +25,25 @@ every datum.
 | **USDe** | Yield-bearing stablecoin | 20 | **~$17.5M** | 77 | **OPEN** |
 
 *Venues and liquidity via GeckoTerminal across all Mantle DEXs (Agni, Merchant Moe classic + Liquidity
-Book, FusionX, …), observed 2026-06-27. Composite = the Distribution Score; see
+Book, FusionX, …). Composite = the Distribution Score; see
 [`METHODOLOGY.md`](METHODOLOGY.md).*
 
-Context (secondary, dated): Mantle RWA TVL was **$247.5M, +27.4% QoQ in Q1 2026** (Messari, reported
-2026-06-09). The capital is arriving — these are the rails it lands on.
+Context: Mantle RWA TVL was **$247.5M, +27.4% QoQ** (Messari). The capital is arriving — these are the
+rails it lands on.
 
 ---
 
 ## MI4 — issued, but barely *distributed*
 
 `0x671642ac281c760e34251d51bc9eef27026f3b7a` (Mantle mainnet) · "Mantle Index Four", 6 decimals,
-total supply ~1.35M (on-chain, 2026-06-25). Issuer / transfer agent: **Securitize**.
+total supply ~1.35M (on-chain). Issuer / transfer agent: **Securitize**.
 
 - **Compliance: GATED.** The contract is a proxy following the Securitize **DS-Token** pattern. The
   compliance detector flagged a **transfer-agent allowlist** — gating functions present on the
-  proxy-resolved implementation ABI (Etherscan V2, 2026-06-25). Transfers are restricted to
+  proxy-resolved implementation ABI (Etherscan V2). Transfers are restricted to
   permissioned wallets.
 - **Reachability: none.** No on-chain secondary venue exists — checked comprehensively across all
-  Mantle DEXs (GeckoTerminal) plus an on-chain Merchant Moe `getPair` probe: **0 pools** (2026-06-27).
+  Mantle DEXs (GeckoTerminal) plus an on-chain Merchant Moe `getPair` probe: **0 pools**.
   No market price exists for MI4 anywhere.
 
 **The finding:** MI4 is a fully-issued, $1M-scale tokenized index whose *only* exit is issuer
@@ -62,8 +62,7 @@ mechanisms — a real distribution distinction that a single compliant/non-compl
 - **GATED (permissioned-in)** — you must be approved to hold. **MI4** only (Securitize allowlist).
 - **BLOCKABLE (permissioned-out)** — freely held unless an account is blocked or sanctioned:
   - **mETH** and **fBTC** — account blocklist (`isBlocked` / `lockUser`).
-  - **USDY** — Ondo blocklist transfer hook (`0x5bE26527e817998A7206475496fDE1E68957c5A6`, on-chain
-    2026-06-26).
+  - **USDY** — Ondo blocklist transfer hook (`0x5bE26527e817998A7206475496fDE1E68957c5A6`, on-chain).
   - **cmETH** — **sanctions screening** (`isSanctioned` / `sanctionsList`).
 - **OPEN** — no holder-gating hooks. **USDe** only.
 
@@ -89,9 +88,9 @@ labelled as estimates throughout, never presented as exact. 24h volume is shown 
 
 - **LayerZero V2 endpoint on Mantle** = `0x1a44076050125825900e736c501f859c50fE728c`, confirmed by an
   on-chain `endpoint()` read on **cmETH** (`0xE6829d9a…e8fA`) and **USDe** (`0x5d3a1Ff2…ef34`) — both
-  are LayerZero OFTs. mETH / fBTC / MI4 / USDY do **not** expose this endpoint (2026-06-27).
+  are LayerZero OFTs. mETH / fBTC / MI4 / USDY do **not** expose this endpoint.
 - **Chainlink CCIP on Mantle** carries LINK / USDC / USDT / wstETH / W0G — **none of the tracked
-  RWAs** (CCIP REST API, `chainId=5000`, 2026-06-27).
+  RWAs** (CCIP REST API, `chainId=5000`).
 
 **The finding:** the cross-chain path for Mantle RWAs is LayerZero-OFT-specific, asset by asset — there
 is no neutral, CCIP-style RWA bridge. An asset not deployed as an OFT has *no verified canonical bridge
@@ -112,8 +111,8 @@ Both states are reported as findings.
 
 ## syrupUSDT — distribution can *regress*
 
-Maple Finance's syrupUSDT, a Mantle asset earlier in Q1 2026 (~$90.1M TVL), is **no longer on Mantle**:
-Maple withdrew USDT from Aave-on-Mantle around 2026-04-20 (rsETH-exploit caution). MantleFlow records
+Maple Finance's syrupUSDT — previously a Mantle asset (~$90.1M TVL) — is **no longer on Mantle**:
+Maple withdrew USDT from Aave-on-Mantle (rsETH-exploit caution). MantleFlow records
 this as a first-class distribution finding — *an RWA that left Mantle* — rather than silently dropping
 it. Distribution is not monotonic.
 

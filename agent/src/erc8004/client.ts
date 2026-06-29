@@ -23,12 +23,12 @@ function erc8004Ctx(config: AppConfig) {
 }
 
 // Deployed Identity registry's MetadataSet event signature (topic0) — captured live from the
-// register/attest tx logs (Mantle, 2026-06-27). Topics: [sig, indexed agentId,
-// indexed keccak256(metadataKey)]. Event-signature topic0 is identical across the same impl. See docs/VERIFIED.md §3.
+// register/attest tx logs on Mantle. Topics: [sig, indexed agentId,
+// indexed keccak256(metadataKey)]. Event-signature topic0 is identical across the same impl.
 const METADATA_SET_TOPIC = "0x2c149ed548c6d2993cd73efe187df6eccabe4538091b33adbd25fafdb8a1468b";
 
-// Deployed Reputation registry's feedback event signature (topic0) — captured live 2026-06-27.
-// Topics: [sig, indexed agentId, indexed client(rater), indexed tagHash]. See docs/VERIFIED.md §3.
+// Deployed Reputation registry's feedback event signature (topic0) — captured live on Mantle.
+// Topics: [sig, indexed agentId, indexed client(rater), indexed tagHash].
 const FEEDBACK_TOPIC = "0x6a4a61743519c9d648a14e6493f47dbe3ff1aa29e7785c96c8326a205e58febc";
 
 // Mantle RPC caps eth_getLogs at ~10k blocks; chunk under that and scan a recent window.

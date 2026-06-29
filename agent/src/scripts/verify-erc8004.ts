@@ -1,5 +1,5 @@
 /**
- * Phase 3 verification gate (CLAUDE.md §3/§4, D6): confirm Mantle Sepolia is reachable and that the
+ * Verification gate: confirm Mantle Sepolia is reachable and that the
  * deployed ERC-8004 Identity + Reputation registries expose the write methods we intend to call,
  * BEFORE we wire any on-chain write. Prints the relevant function signatures from the deployed ABI.
  *
