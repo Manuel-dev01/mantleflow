@@ -1,4 +1,4 @@
-# /skill — the Mantle AI Agent Skill (the bonus)
+# /skill - the Mantle AI Agent Skill (the bonus)
 
 Open Anthropic `SKILL.md` folder format (spec: agentskills.io/specification). Earns the Research
 Challenge's "AI Agent Skills" bonus.

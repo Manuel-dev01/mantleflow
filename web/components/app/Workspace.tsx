@@ -92,8 +92,9 @@ export function Workspace({
           </div>
         </div>
 
-        {/* panel */}
-        <div className="relative min-h-[480px]">
+        {/* panel — min-w-0 lets the 1fr grid track shrink instead of letting wide content (LLM
+            answer tables, long addresses) widen the whole page and cause horizontal scroll. */}
+        <div className="relative min-h-[480px] min-w-0">
           {loading ? (
             <PanelMessage text="Reading live Mantle state…" />
           ) : error ? (

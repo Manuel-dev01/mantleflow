@@ -25,6 +25,10 @@ body {
 }
 
 /* Markdown styling for the agent answer — paper/acid brutalist, not the old teal. */
+.answer {
+  /* long addresses / URLs wrap instead of forcing the page wider (horizontal scroll). */
+  overflow-wrap: anywhere;
+}
 .answer h1,
 .answer h2,
 .answer h3 {
@@ -66,6 +70,7 @@ body {
 }
 .answer table {
   width: 100%;
+  table-layout: fixed; /* columns fit the container and wrap; never widen the page */
   border-collapse: collapse;
   margin: 0.75rem 0;
   font-size: 0.9em;
@@ -75,6 +80,7 @@ body {
   border: 2px solid #2a2a28;
   padding: 0.45rem 0.65rem;
   text-align: left;
+  overflow-wrap: anywhere;
 }
 .answer th {
   font-family: var(--font-mono), monospace;

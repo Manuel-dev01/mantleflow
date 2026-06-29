@@ -1,7 +1,7 @@
 ---
 name: mantleflow-distribution
 description: >-
-  Map the on-chain DISTRIBUTION (not issuance) of a tokenized / real-world asset on Mantle — where
+  Map the on-chain DISTRIBUTION (not issuance) of a tokenized / real-world asset on Mantle - where
   it can actually be bought, sold, borrowed against, and bridged, and exactly who is gated from
   holding it. Use this whenever a user asks about secondary-market reachability, liquidity depth or
   fragmentation, borrowability/collateral, compliance gating (transfer-agent allowlists, blocklists),
@@ -15,14 +15,14 @@ metadata:
   thesis: distribution-over-issuance
 ---
 
-# MantleFlow — RWA Distribution Mapping (Mantle)
+# MantleFlow - RWA Distribution Mapping (Mantle)
 
 ## What this skill does
 
 Issuance is easy; **distribution** is the hard problem. For any tokenized asset on Mantle this skill
 answers, from **live on-chain data**: where can it be bought/sold (secondary venues), how deep and
 how fragmented is its liquidity, what can you borrow against it, and **who is walled out from holding
-it** (compliance gates). It returns a **Distribution Score** decomposed into sourced sub-scores —
+it** (compliance gates). It returns a **Distribution Score** decomposed into sourced sub-scores -
 never a black-box number.
 
 ## When to use it
@@ -37,18 +37,18 @@ Do **not** use it for: token minting/issuance mechanics, price forecasts, or non
 
 ## Tracked assets
 
-`MI4` (Mantle Index Four — Securitize-gated), `mETH`, `cmETH`, `fBTC`, `USDe`, `USDY`.
+`MI4` (Mantle Index Four - Securitize-gated), `mETH`, `cmETH`, `fBTC`, `USDe`, `USDY`.
 
 ## The Distribution Score (sub-scores, each sourced)
 
-1. **Reachability** — does a live secondary venue exist? (+ the venue list)
-2. **Liquidity depth** — USD tradeable within ±2% of mid (exact on constant-product pools) + real
+1. **Reachability** - does a live secondary venue exist? (+ the venue list)
+2. **Liquidity depth** - USD tradeable within ±2% of mid (exact on constant-product pools) + real
    $250k clearing slippage.
-3. **Fragmentation** — Herfindahl–Hirschman Index across venues.
-4. **Borrowability** — Lendle collateral factor / rates / utilization.
-5. **Compliance gating** — the detected on-chain mechanism (e.g. Securitize DS-Token allowlist,
+3. **Fragmentation** - Herfindahl–Hirschman Index across venues.
+4. **Borrowability** - Lendle collateral factor / rates / utilization.
+5. **Compliance gating** - the detected on-chain mechanism (e.g. Securitize DS-Token allowlist,
    ERC-1404, blocklist). An absence of a market or a holder gate is a *headline finding*, not a gap.
-6. **Cross-chain reach** — verified bridge channels (LayerZero OFT / Chainlink CCIP); reported as
+6. **Cross-chain reach** - verified bridge channels (LayerZero OFT / Chainlink CCIP); reported as
    insufficient-data when no channel is verified.
 
 ## Accuracy invariant
@@ -75,5 +75,5 @@ capability is live at `https://mantleflow.vercel.app` (`POST /api/query`, `GET /
 ## Agent-native provenance
 
 MantleFlow holds an **ERC-8004 identity** on Mantle Sepolia and can write a **provenance receipt**
-for any result — an on-chain commitment (`feedbackHash`) to the exact Distribution Score map, so a
+for any result - an on-chain commitment (`feedbackHash`) to the exact Distribution Score map, so a
 result can be independently verified later. See `references/distribution-score.md`.

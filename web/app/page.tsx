@@ -18,7 +18,7 @@ import {
 // stays in sync with the live app.
 export const revalidate = 300;
 
-// MI4 = the centerpiece (the brief's "$1M MI4" example): the thesis in one card — holder GATED by
+// MI4 = the centerpiece (the brief's "$1M MI4" example): the thesis in one card - holder GATED by
 // Securitize + no on-chain secondary trading venue. A strong, honest headline (HOLDING = GATED).
 const PREVIEW_SYMBOL = "MI4";
 
@@ -29,14 +29,14 @@ async function loadPreview(): Promise<DistributionMap | null> {
   const deadline = new Promise<null>((resolve) => setTimeout(() => resolve(null), 30_000));
   const build = (async () => {
     // Build up to twice: never CACHE a snapshot where compliance degraded to insufficient-data (a
-    // transient Etherscan failure) — that's what made the landing disagree with the live app.
+    // transient Etherscan failure) - that's what made the landing disagree with the live app.
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const map = await caps.buildDistributionMap(PREVIEW_SYMBOL);
         const comp = map.subScores.find((s) => s.id === "compliance");
         if (comp?.status !== "insufficient-data" || attempt === 1) return map;
       } catch {
-        if (attempt === 1) return null; // never fabricate — render the honest "unavailable" shell
+        if (attempt === 1) return null; // never fabricate - render the honest "unavailable" shell
       }
     }
     return null;
