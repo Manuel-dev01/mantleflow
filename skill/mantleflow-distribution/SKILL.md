@@ -42,8 +42,8 @@ Do **not** use it for: token minting/issuance mechanics, price forecasts, or non
 ## The Distribution Score (sub-scores, each sourced)
 
 1. **Reachability** - does a live secondary venue exist? (+ the venue list)
-2. **Liquidity depth** - USD tradeable within ±2% of mid (exact on constant-product pools) + real
-   $250k clearing slippage.
+2. **Liquidity depth** - USD tradeable within ±2% of mid + $250k clearing slippage: exact from on-chain
+   reserves where available, otherwise a labelled CPMM estimate from GeckoTerminal pool reserves.
 3. **Fragmentation** - Herfindahl–Hirschman Index across venues.
 4. **Borrowability** - Lendle collateral factor / rates / utilization.
 5. **Compliance gating** - the detected on-chain mechanism (e.g. Securitize DS-Token allowlist,
@@ -67,13 +67,14 @@ This skill wraps the **MantleFlow MCP server** (`@mantleflow/mcp`, stdio). Tools
 | `resolve_asset(query)` | map NL → a tracked symbol |
 | `get_distribution_map(symbol)` | the full sourced map for one asset |
 | `compare_assets()` | every asset, ranked |
-| `get_agent_identity()` | the agent's ERC-8004 identity (Mantle Sepolia) |
+| `get_agent_identity()` | the agent's ERC-8004 identity (Mantle mainnet #141 / Sepolia #309) |
 
 Start it: `npx tsx mcp/src/server.ts` (see `mcp/README.md` for the Claude Desktop config). The same
 capability is live at `https://mantleflow.vercel.app` (`POST /api/query`, `GET /api/map?symbol=`).
 
 ## Agent-native provenance
 
-MantleFlow holds an **ERC-8004 identity** on Mantle Sepolia and can write a **provenance receipt**
-for any result - an on-chain commitment (`feedbackHash`) to the exact Distribution Score map, so a
-result can be independently verified later. See `references/distribution-score.md`.
+MantleFlow holds an **ERC-8004 identity** (registered on Mantle mainnet, agentId #141; prior Sepolia #309)
+and can write a **provenance receipt** for any result by stamping `keccak256(canonicalJSON(map))` into its
+own identity metadata via `Identity.setMetadata` - tamper-evident and independently verifiable later, not a
+self-score. See `references/distribution-score.md`.
