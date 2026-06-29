@@ -246,7 +246,7 @@ export function StatBand({ stats }: { stats: { v: string; k: string }[] }) {
 }
 
 const STACK = [
-  { num: "01", title: "ERC-8004 Identity", body: "The agent holds an on-chain identity (ERC-721 agentId) on Mantle Sepolia and writes tamper-evident provenance receipts committing to each result." },
+  { num: "01", title: "ERC-8004 Identity", body: "The agent holds an on-chain identity (ERC-721 agentId) on Mantle and writes tamper-evident provenance receipts committing to each result." },
   { num: "02", title: "MCP Server", body: "Every capability is exposed over the Model Context Protocol - any agent (Claude Desktop, A2A) can call MantleFlow's distribution tools." },
   { num: "03", title: "AI Agent Skill", body: "Packaged as an open SKILL.md skill wrapping the MCP server - drop it into any skills-aware agent." },
 ];

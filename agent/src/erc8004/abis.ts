@@ -3,9 +3,10 @@
  * (https://eips.ethereum.org/EIPS/eip-8004) and confirmed against the deployed Mantle Sepolia
  * registries by on-chain simulation before any write (address-trust rule).
  *
- * Identity is ERC-721: an agent is an NFT (`agentId` = token id). Reputation feedback is given by a
- * client address about an agentId; MantleFlow uses it to write tamper-evident PROVENANCE receipts
- * (feedbackHash commits to the exact result), not self-scores.
+ * Identity is ERC-721: an agent is an NFT (`agentId` = token id). MantleFlow writes tamper-evident
+ * PROVENANCE receipts via Identity.setMetadata (key = keccak256 of the canonical result), not via
+ * reputation feedback. Reputation `giveFeedback` is reserved for genuine THIRD-PARTY ratings (the
+ * registry forbids self-feedback).
  */
 
 export const IDENTITY_ABI = [

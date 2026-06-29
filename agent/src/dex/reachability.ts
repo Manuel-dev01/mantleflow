@@ -114,8 +114,14 @@ export async function findSecondaryVenues(
 
   // DefiLlama — keep only YIELD/vault positions (single-asset deposits). GeckoTerminal supersedes
   // DefiLlama's swap pools (avoids double-counting); yield positions are surfaced, not counted.
-  const llamaPools = await llama.poolsForToken(token, observedAt);
-  for (const p of llamaPools.value) {
+  // Best-effort: a DefiLlama outage must not throw and sink the map (swap reachability is unaffected).
+  let llamaPools = null as Awaited<ReturnType<typeof llama.poolsForToken>> | null;
+  try {
+    llamaPools = await llama.poolsForToken(token, observedAt);
+  } catch {
+    /* DefiLlama unavailable — yield positions omitted */
+  }
+  for (const p of llamaPools?.value ?? []) {
     const c = classifyLlamaPool(p);
     if (c.type !== "yield") continue;
     venues.push({
@@ -123,7 +129,7 @@ export async function findSecondaryVenues(
       kind: "dex-pool",
       venueType: "yield",
       classification: c.reason,
-      receipt: { ...llamaPools.receipt, note: `DefiLlama pool ${p.pool} (TVL $${Math.round(p.tvlUsd)}) — ${c.reason}` },
+      receipt: { ...llamaPools!.receipt, note: `DefiLlama pool ${p.pool} (TVL $${Math.round(p.tvlUsd)}) — ${c.reason}` },
     });
   }
 

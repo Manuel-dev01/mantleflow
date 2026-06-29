@@ -9,6 +9,19 @@ export function depthSubScore(liq: LiquidityResult): SubScore {
   // Keep ALL venues in inputs (drillable), but score over swap venues only.
   const inputs: Sourced<unknown>[] = liq.venues.map((v) => ({ value: v, receipt: v.receipt }));
   if (liq.swapVenues.length === 0) {
+    // Only a confirmed absence if the comprehensive DEX index actually responded. If GeckoTerminal
+    // was unreachable we cannot claim "no market" — report insufficient-data (mirrors reachability).
+    if (!liq.gtSourced) {
+      return {
+        id: "liquidity-depth",
+        label: "Liquidity depth (±2% of mid)",
+        status: "insufficient-data",
+        value: null,
+        explanation:
+          "The comprehensive DEX index (GeckoTerminal) was unreachable, so depth could not be measured — not a confirmed absence.",
+        inputs,
+      };
+    }
     const yieldNote = liq.yieldVenues.length
       ? ` ${liq.yieldVenues.length} yield/vault position(s) exist but are not exit liquidity.`
       : "";
@@ -22,6 +35,11 @@ export function depthSubScore(liq: LiquidityResult): SubScore {
     };
   }
   const hasExact = liq.swapVenues.some((v) => v.method === "cpmm-exact");
+  // If the full index was unreachable but on-chain probing found venue(s), the number is a partial
+  // lower bound, not the whole market — say so rather than present it as authoritative.
+  const partialNote = liq.gtSourced
+    ? ""
+    : " (partial — the full DEX index was unreachable; based only on the on-chain venues found.)";
   const depthNote =
     liq.totalDepthUsdAt2pct > 0
       ? ` ~${fmtUsd(liq.totalDepthUsdAt2pct)} tradeable within ±2% of mid (${hasExact ? "exact on-chain reserves + " : ""}CPMM estimate from pool reserves).`
@@ -31,7 +49,7 @@ export function depthSubScore(liq: LiquidityResult): SubScore {
     label: "Liquidity depth (±2% of mid)",
     status: "computed",
     value: liquidityBand(liq.totalLiquidityUsd),
-    explanation: `Aggregate trading-venue liquidity ≈ ${fmtUsd(liq.totalLiquidityUsd)} across ${liq.swapVenues.length} venue(s).${depthNote}`,
+    explanation: `Aggregate trading-venue liquidity ≈ ${fmtUsd(liq.totalLiquidityUsd)} across ${liq.swapVenues.length} venue(s).${partialNote}${depthNote}`,
     inputs,
   };
 }

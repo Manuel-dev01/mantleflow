@@ -169,8 +169,9 @@ function DeepDiveBlock({
 }
 
 /**
- * On-chain provenance: write an ERC-8004 Reputation entry whose feedbackHash commits to THIS exact
- * result. Framed as a tamper-evident provenance receipt of work done — NOT a self-awarded score.
+ * On-chain provenance: stamp keccak256(this result) into the agent's ERC-8004 IDENTITY via
+ * Identity.setMetadata. A tamper-evident provenance receipt of work done - NOT a self-awarded score
+ * (the Reputation registry forbids self-feedback).
  */
 function AttestBlock({ map }: { map: DistributionMap }) {
   const [state, setState] = useState<"idle" | "writing">("idle");

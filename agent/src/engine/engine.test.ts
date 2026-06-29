@@ -12,7 +12,7 @@ const asset = {
 const ts = "2026-06-26T00:00:00.000Z";
 const rcpt = { sourceName: "test", url: "", observedAt: ts, kind: "fact" as const };
 
-const emptyLiquidity: LiquidityResult = { venues: [], swapVenues: [], yieldVenues: [], totalLiquidityUsd: 0, totalDepthUsdAt2pct: 0 };
+const emptyLiquidity: LiquidityResult = { venues: [], swapVenues: [], yieldVenues: [], totalLiquidityUsd: 0, totalDepthUsdAt2pct: 0, gtSourced: true };
 const notListed = (): { value: LendleReserve; receipt: typeof rcpt } => ({
   value: {
     listed: false,
@@ -91,6 +91,7 @@ describe("assembleDistributionMap", () => {
       yieldVenues: [],
       totalLiquidityUsd: 8_000_000,
       totalDepthUsdAt2pct: 49_750,
+      gtSourced: true,
     };
     const reachV = [{ venue: "Merchant Moe ·/USDC", kind: "dex-pair" as const, venueType: "swap" as const, receipt: rcpt }];
     const input: AssembleInput = {

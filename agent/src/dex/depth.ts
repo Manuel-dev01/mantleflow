@@ -44,6 +44,10 @@ export interface LiquidityResult {
   /** Totals over SWAP venues only (vault TVL is not tradeable secondary liquidity). */
   totalLiquidityUsd: number;
   totalDepthUsdAt2pct: number;
+  /** Whether the comprehensive DEX index (GeckoTerminal) responded. false ⇒ the venue set may be
+   * incomplete; depth/fragmentation report insufficient-data (or a partial caveat) rather than a
+   * false "no secondary market". */
+  gtSourced: boolean;
 }
 
 const FACTORY_ABI = [
@@ -126,8 +130,12 @@ export async function analyzeLiquidity(
       const assetIsToken0 = getAddress(token0) === getAddress(asset);
       const quoteReserveRaw = assetIsToken0 ? reserves[1] : reserves[0];
 
-      const qp = await prices.getPrice(quote.address, observedAt);
-      const quotePrice = qp.value?.priceUsd;
+      let quotePrice: number | undefined;
+      try {
+        quotePrice = (await prices.getPrice(quote.address, observedAt)).value?.priceUsd;
+      } catch {
+        continue; // price source transiently unavailable — skip this pair, don't sink the map
+      }
       if (quotePrice == null) continue;
 
       const quoteReserveUsd = (Number(quoteReserveRaw) / 10 ** quote.decimals) * quotePrice;
@@ -183,8 +191,14 @@ export async function analyzeLiquidity(
   }
 
   // 3) DefiLlama — YIELD/vault positions only (single-asset TVL; not tradeable secondary liquidity).
-  const pools = await llama.poolsForToken(asset, observedAt);
-  for (const p of pools.value) {
+  //    Best-effort: a DefiLlama outage must not throw and sink the whole map.
+  let pools = null as Awaited<ReturnType<typeof llama.poolsForToken>> | null;
+  try {
+    pools = await llama.poolsForToken(asset, observedAt);
+  } catch {
+    /* DefiLlama unavailable — yield positions omitted (does not affect swap depth) */
+  }
+  for (const p of pools?.value ?? []) {
     const c = classifyLlamaPool(p);
     if (c.type !== "yield") continue;
     venues.push({
@@ -195,7 +209,7 @@ export async function analyzeLiquidity(
       method: "tvl-proxy",
       venueType: "yield",
       classification: c.reason,
-      receipt: { ...pools.receipt, note: `DefiLlama pool ${p.pool} · TVL $${Math.round(p.tvlUsd)} — ${c.reason}` },
+      receipt: { ...pools!.receipt, note: `DefiLlama pool ${p.pool} · TVL $${Math.round(p.tvlUsd)} — ${c.reason}` },
     });
   }
 
@@ -208,5 +222,6 @@ export async function analyzeLiquidity(
     // Totals over SWAP venues only — vault TVL isn't tradeable exit liquidity.
     totalLiquidityUsd: swapVenues.reduce((s, v) => s + v.liquidityUsd, 0),
     totalDepthUsdAt2pct: swapVenues.reduce((s, v) => s + (v.depthUsdAt2pct ?? 0), 0),
+    gtSourced: gtPools.ok,
   };
 }

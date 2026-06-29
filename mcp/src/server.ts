@@ -61,16 +61,19 @@ server.tool(
 
 server.tool(
   "get_agent_identity",
-  "Return MantleFlow's ERC-8004 identity registry coordinates on Mantle Sepolia + the agentId (if set).",
+  "Return MantleFlow's ERC-8004 identity registry coordinates (the configured network — Mantle mainnet or Sepolia) + the agentId (if set).",
   {},
-  async () =>
-    asText({
-      chain: "eip155:5003",
-      identityRegistry: ERC8004.sepolia.identity,
-      reputationRegistry: ERC8004.sepolia.reputation,
-      agentId: process.env.AGENT_ID ?? null,
+  async () => {
+    const net = config.erc8004Network;
+    return asText({
+      chain: net === "mainnet" ? "eip155:5000" : "eip155:5003",
+      network: net === "mainnet" ? "Mantle" : "Mantle Sepolia",
+      identityRegistry: ERC8004[net].identity,
+      reputationRegistry: ERC8004[net].reputation,
+      agentId: config.agentId ?? process.env.AGENT_ID ?? null,
       agentCard: config.agentCardUrl,
-    }),
+    });
+  },
 );
 
 async function main() {

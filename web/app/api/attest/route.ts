@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { loadConfig, createErc8004Writer, hashResult, type DistributionMap } from "@mantleflow/agent";
 
-// Writes a tamper-evident PROVENANCE receipt to the ERC-8004 Reputation registry: a feedback entry
-// whose feedbackHash commits to the exact DistributionMap result. NOT a self-score (value=0). Needs
-// the agent key + AGENT_ID; responds honestly (501) when unconfigured rather than faking a tx.
+// Writes a tamper-evident PROVENANCE receipt to the agent's ERC-8004 IDENTITY via Identity.setMetadata:
+// a content-addressed key = keccak256 of the canonical result (hashResult) committing to the exact
+// DistributionMap. NOT a self-score (the Reputation registry forbids self-feedback). Needs the agent
+// key + AGENT_ID; responds honestly (501) when unconfigured rather than faking a tx.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;

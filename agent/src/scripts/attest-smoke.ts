@@ -1,6 +1,6 @@
 /**
  * Smoke-test the provenance-write path end-to-end: read the identity back, then write ONE provenance
- * receipt (giveFeedback) committing to a sample result hash, and read the summary count.
+ * receipt (Identity.setMetadata) committing to a sample result hash, then confirm the MetadataSet event.
  * Run: pnpm -C agent exec tsx src/scripts/attest-smoke.ts
  */
 import "dotenv/config";

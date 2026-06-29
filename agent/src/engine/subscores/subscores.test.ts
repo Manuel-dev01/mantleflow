@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { fragmentationSubScore } from "./fragmentation.js";
+import { depthSubScore } from "./depth.js";
 import { borrowabilitySubScore } from "./borrowability.js";
 import { liquidityBand } from "./util.js";
 import { decodeLendleReserve, type LendleReserve } from "../../adapters/lendle.js";
@@ -22,6 +23,7 @@ const liqOf = (venues: ReturnType<typeof venue>[]): LiquidityResult => ({
   yieldVenues: [],
   totalLiquidityUsd: venues.reduce((s, v) => s + v.liquidityUsd, 0),
   totalDepthUsdAt2pct: 0,
+  gtSourced: true,
 });
 
 describe("fragmentation HHI", () => {
@@ -35,6 +37,25 @@ describe("fragmentation HHI", () => {
   });
   it("no venues → not-applicable", () => {
     expect(fragmentationSubScore(liqOf([])).status).toBe("not-applicable");
+  });
+});
+
+describe("DEX index unreachable (gtSourced=false) — absence must not be faked", () => {
+  const unreachable: LiquidityResult = {
+    venues: [], swapVenues: [], yieldVenues: [], totalLiquidityUsd: 0, totalDepthUsdAt2pct: 0, gtSourced: false,
+  };
+  it("depth → insufficient-data, not a false 'no secondary market'", () => {
+    const s = depthSubScore(unreachable);
+    expect(s.status).toBe("insufficient-data");
+    expect(s.value).toBeNull();
+  });
+  it("fragmentation → insufficient-data when the index was unreachable", () => {
+    expect(fragmentationSubScore(unreachable).status).toBe("insufficient-data");
+  });
+  it("genuine empty (gtSourced=true) still reports not-applicable", () => {
+    const empty: LiquidityResult = { venues: [], swapVenues: [], yieldVenues: [], totalLiquidityUsd: 0, totalDepthUsdAt2pct: 0, gtSourced: true };
+    expect(depthSubScore(empty).status).toBe("not-applicable");
+    expect(fragmentationSubScore(empty).status).toBe("not-applicable");
   });
 });
 

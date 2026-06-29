@@ -12,6 +12,17 @@ export function fragmentationSubScore(liq: LiquidityResult): SubScore {
   const v = liq.swapVenues.filter((x) => x.liquidityUsd > 0);
   const inputs: Sourced<unknown>[] = v.map((x) => ({ value: x, receipt: x.receipt }));
   if (v.length === 0) {
+    if (!liq.gtSourced) {
+      return {
+        id: "fragmentation",
+        label: "Fragmentation (HHI)",
+        status: "insufficient-data",
+        value: null,
+        explanation:
+          "The comprehensive DEX index (GeckoTerminal) was unreachable — fragmentation could not be measured.",
+        inputs,
+      };
+    }
     return {
       id: "fragmentation",
       label: "Fragmentation (HHI)",
@@ -31,12 +42,15 @@ export function fragmentationSubScore(liq: LiquidityResult): SubScore {
     v.length === 1
       ? "Liquidity is fully concentrated in one venue."
       : `Liquidity spread across ${v.length} venues.`;
+  const partialNote = liq.gtSourced
+    ? ""
+    : " (partial — the full DEX index was unreachable; HHI may overstate concentration.)";
   return {
     id: "fragmentation",
     label: "Fragmentation (HHI)",
     status: "computed",
     value,
-    explanation: `HHI = ${Math.round(hhi)} (10000 = single venue). ${concentration}`,
+    explanation: `HHI = ${Math.round(hhi)} (10000 = single venue). ${concentration}${partialNote}`,
     inputs,
   };
 }
