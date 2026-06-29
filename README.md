@@ -71,8 +71,8 @@ Distribution varies enormously across six Mantle assets — that spread *is* the
   (blocklist/sanctions controls, surfaced on-chain), only USDe fully `OPEN`.
 - **RWAs bridge by LayerZero OFT or not at all** — cmETH/USDe routes verified; none on Mantle's CCIP set.
 
-Full analysis: [`docs/RESEARCH.md`](docs/RESEARCH.md) · fact ledger: [`docs/VERIFIED.md`](docs/VERIFIED.md) ·
-engineering decisions: [`docs/DECISIONS.md`](docs/DECISIONS.md).
+Full per-asset findings: [`docs/FINDINGS.md`](docs/FINDINGS.md) · how the score works:
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) · how to use it: [`docs/USAGE.md`](docs/USAGE.md).
 
 ---
 
@@ -115,7 +115,7 @@ On-chain CPMM reserves are exact; ±2% depth and slippage derived from pool rese
 /mcp        MCP server exposing the agent's tools to any agent (stdio)
 /skill      the Mantle AI Agent Skill (SKILL.md wrapping the MCP server)
 /contracts  Foundry — ERC-8004 writes and x402 settlement helpers
-/docs       RESEARCH.md (writeup) · VERIFIED.md (fact ledger) · DECISIONS.md (ADR log)
+/docs       FINDINGS.md (research results) · METHODOLOGY.md (the score) · USAGE.md (user guide)
 ```
 
 ## Develop
@@ -131,7 +131,8 @@ pnpm -C web build
 
 ## Accuracy discipline
 
-Accuracy is a first-class constraint, not a footnote. Every number displayed in the UI or stated in the
-writeup is traceable to a primary source with a timestamp, recorded in [`docs/VERIFIED.md`](docs/VERIFIED.md).
-Facts are distinguished from estimates and assumptions throughout. Where data is unavailable, the tool says
-so explicitly and frames the absence as a finding — it never fabricates or hardcodes a result.
+Accuracy is a first-class constraint, not a footnote. Every number displayed in the UI or stated in these
+docs is traceable to a primary source with a timestamp, shown as a source receipt on every datum in the
+live app (see [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md)). Facts are distinguished from estimates and
+assumptions throughout. Where data is unavailable, the tool says so explicitly and frames the absence as a
+finding — it never fabricates or hardcodes a result.

@@ -30,7 +30,12 @@ coverage/
 .vercel
 
 # internal working docs — kept on disk, excluded from the public submission
+# (build process / engineering decisions / QA — superseded for the submission by
+#  docs/FINDINGS.md, docs/METHODOLOGY.md, docs/USAGE.md)
 /CLAUDE.md
 /PROJECT_BRIEF.md
 docs/DEMO_CHECKLIST.md
 docs/DEMO_SCRIPT.md
+docs/RESEARCH.md
+docs/VERIFIED.md
+docs/DECISIONS.md
