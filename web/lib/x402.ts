@@ -86,7 +86,24 @@ export async function payAndRunQuery(query: string, onStep?: (s: DeepDiveStep) =
   const from = await connectSepolia();
 
   onStep?.("funding");
-  await fetch("/api/faucet", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ to: from }) }).catch(() => {});
+  // Server-funded mint of test tmUSD to the buyer. Await it and surface a clear error if it fails —
+  // a silent faucet failure would leave a zero balance and the signed transfer would later revert at
+  // settlement with a confusing on-chain error, instead of a readable "couldn't fund" message here.
+  const faucetRes = await fetch("/api/faucet", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ to: from }),
+  }).catch(() => null);
+  if (!faucetRes || !faucetRes.ok) {
+    const reason = faucetRes
+      ? ((await faucetRes.json().catch(() => null)) as { error?: string } | null)?.error
+      : null;
+    return {
+      error: reason
+        ? `Couldn't fund the test wallet: ${reason}`
+        : "Couldn't fund the test wallet (faucet unavailable) — please try again.",
+    };
+  }
 
   onStep?.("signing");
   const authorization = {
