@@ -42,7 +42,9 @@ export function OverviewTab({ map, answer }: { map: DistributionMap; answer: str
         </div>
       ) : null}
 
-      <DeepDiveBlock map={map} done={!!shownAnswer} settlement={deep?.settlement} onResult={setDeep} />
+      {/* `done` = the PAID deep-dive has completed (not merely that the free answer is shown), so the
+          "RUN AI DEEP-DIVE" button stays available after the free LLM answer renders. */}
+      <DeepDiveBlock map={map} done={deep != null} settlement={deep?.settlement} onResult={setDeep} />
 
       <div className="grid grid-cols-2 border-2 border-paper md:grid-cols-4">
         {cells.map((c, i) => (

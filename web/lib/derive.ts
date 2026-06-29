@@ -162,13 +162,14 @@ export function overviewStats(map: DistributionMap): OverviewStats {
       receipt: swapVenues[0]?.receipt ?? subOf(map, "reachability")?.inputs[0]?.receipt,
     },
     depth: {
+      // A muted "—" reads as "n/a — no venue" (a finding), not a broken value; real depth shows white.
       value: totalDepth > 0 ? fmtUsdLocal(totalDepth) : "—",
-      tone: "paper",
+      tone: totalDepth > 0 ? "paper" : "mut",
       receipt: subOf(map, "liquidity-depth")?.inputs[0]?.receipt,
     },
     bestSlip: {
       value: bestSlip != null ? `${bestSlip.toFixed(2)}%` : "—",
-      tone: bestSlip != null && bestSlip < 1 ? "acid" : "paper",
+      tone: bestSlip == null ? "mut" : bestSlip < 1 ? "acid" : "paper",
       receipt: bestSlipVenue?.receipt,
     },
     holding,
