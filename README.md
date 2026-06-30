@@ -2,8 +2,13 @@
 
 **An AI research agent that maps the _distribution_ of tokenized and real-world assets on Mantle - not their issuance.**
 
-🔗 **Live:** https://mantleflow.vercel.app
+🔗 **Live:** https://mantleflow.vercel.app  ·  🎥 **Demo:** https://youtu.be/Wq58t9zHP-Q
 🧪 Try it: *“I hold $1M of MI4 - where can I exit it, how deep is secondary liquidity, and am I gated?”*
+
+> **Mantle Research Challenge · Track 2 (The Research Agent).** *What it does & why* → the sections below ·
+> *how it's built* → [Repository layout](#repository-layout) + [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) ·
+> *one live example* → the live URL + the demo above (the “$1M MI4” walkthrough). Bonus: a Mantle
+> **AI Agent Skill** ([`skill/mantleflow-distribution/`](skill/mantleflow-distribution)).
 
 For any Mantle-native RWA or capital-market asset, MantleFlow answers one question in natural language:
 
