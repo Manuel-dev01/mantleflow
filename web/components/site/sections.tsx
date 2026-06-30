@@ -21,9 +21,9 @@ export function Nav() {
     <div className="sticky top-0 z-50 flex items-center justify-between border-b-2 border-paper bg-ink px-6 py-4 font-mono md:px-[34px]">
       <span className="text-[15px] font-semibold tracking-[0.04em]">MANTLEFLOW</span>
       <div className="flex items-center gap-5 text-xs text-mut md:gap-[30px]">
-        <span className="hidden sm:inline">PRODUCT</span>
-        <span className="hidden sm:inline">THESIS</span>
-        <span className="hidden sm:inline">VENUES</span>
+        <a href="#product" className="hidden transition-colors hover:text-paper sm:inline">PRODUCT</a>
+        <a href="#thesis" className="hidden transition-colors hover:text-paper sm:inline">THESIS</a>
+        <a href="#venues" className="hidden transition-colors hover:text-paper sm:inline">VENUES</a>
         <LaunchCTA size="sm" />
       </div>
     </div>
@@ -90,7 +90,7 @@ const THESIS = [
 
 export function Thesis() {
   return (
-    <div className="border-b-2 border-paper px-6 py-24 md:px-[34px]">
+    <div id="thesis" className="scroll-mt-20 border-b-2 border-paper px-6 py-24 md:px-[34px]">
       <div className="mb-[30px] font-mono text-xs tracking-[0.16em] text-mut">§01 - THE THESIS</div>
       <h2 className="m-0 mb-16 max-w-[1100px] font-display text-[clamp(30px,5.2vw,68px)] font-bold uppercase leading-[0.95] tracking-[-0.02em]">
         Anyone can mint an asset. The market is everywhere it goes <span className="text-acid">next.</span>
@@ -122,7 +122,7 @@ const CAPABILITIES = [
 
 export function HowItWorks() {
   return (
-    <div className="border-b-2 border-paper px-6 py-24 md:px-[34px]">
+    <div id="venues" className="scroll-mt-20 border-b-2 border-paper px-6 py-24 md:px-[34px]">
       <div className="mb-14 flex flex-wrap items-end justify-between gap-[30px]">
         <div>
           <div className="mb-[30px] font-mono text-xs tracking-[0.16em] text-mut">§02 - HOW IT WORKS</div>
@@ -156,7 +156,7 @@ export function HowItWorks() {
 /** Live product preview - real data for one asset, or an honest "unavailable" shell. */
 export function ProductPreview({ map }: { map: DistributionMap | null }) {
   return (
-    <div className="border-b-2 border-paper px-6 py-24 md:px-[34px]">
+    <div id="product" className="scroll-mt-20 border-b-2 border-paper px-6 py-24 md:px-[34px]">
       <div className="mb-[30px] font-mono text-xs tracking-[0.16em] text-mut">§03 - SEE IT WORK · LIVE</div>
       <div className="border-2 border-paper">
         <div className="flex items-center justify-between border-b-2 border-paper px-[18px] py-3 font-mono text-xs">
