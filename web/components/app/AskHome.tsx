@@ -1,4 +1,7 @@
+import { useState } from "react";
 import { AssetChips } from "./AssetChips";
+import type { Network } from "../../lib/api";
+import type { AnalyzedAsset } from "../../lib/history";
 
 const EXAMPLES = [
   "I hold $1M of MI4 — where can I exit it, and am I gated?",
@@ -13,10 +16,14 @@ interface Props {
   query: string;
   loading: boolean;
   recent: { q: string; t: string }[];
+  network: Network;
+  recentAssets: AnalyzedAsset[];
   onQueryChange: (q: string) => void;
   onPickAsset: (sym: string) => void;
   onRun: () => void;
   onRunExample: (q: string) => void;
+  onNetworkChange: (n: Network) => void;
+  onAnalyze: (input: string, network: Network) => void;
 }
 
 export function AskHome({
@@ -25,11 +32,19 @@ export function AskHome({
   query,
   loading,
   recent,
+  network,
+  recentAssets,
   onQueryChange,
   onPickAsset,
   onRun,
   onRunExample,
+  onNetworkChange,
+  onAnalyze,
 }: Props) {
+  const [anyInput, setAnyInput] = useState("");
+  const runAny = () => {
+    if (!loading && anyInput.trim()) onAnalyze(anyInput, network);
+  };
   return (
     <div className="flex max-w-[980px] flex-1 flex-col px-6 py-16 md:px-[34px]">
       <div className="mb-5 font-mono text-xs tracking-[0.14em] text-mut">NEW QUERY</div>
@@ -63,9 +78,70 @@ export function AskHome({
         </button>
       </div>
 
-      <div className="mb-3 mt-[26px] font-mono text-[11px] tracking-[0.12em] text-mut">PICK AN ASSET</div>
-      <div className="mb-9">
+      <div className="mb-3 mt-[26px] font-mono text-[11px] tracking-[0.12em] text-mut">PICK AN ASSET (FEATURED)</div>
+      <div className="mb-8">
         <AssetChips assets={assets} active={asset} onPick={onPickAsset} size="md" />
+      </div>
+
+      {/* Analyze ANY Mantle token — paste an address or type a symbol; mainnet or Sepolia. */}
+      <div className="mb-9 max-w-[760px]">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <span className="font-mono text-[11px] tracking-[0.12em] text-mut">OR ANALYZE ANY MANTLE ASSET</span>
+          <div className="flex border-2 border-line font-mono text-[10px]">
+            {(["mainnet", "sepolia"] as const).map((n) => (
+              <button
+                key={n}
+                onClick={() => onNetworkChange(n)}
+                className={`px-2.5 py-1 uppercase tracking-[0.06em] transition-colors ${
+                  network === n ? "bg-acid text-ink" : "text-mut hover:text-paper"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 border-2 border-paper py-3 pl-[18px] pr-3">
+          <span className="font-mono text-[15px] text-acid">⌖</span>
+          <input
+            value={anyInput}
+            onChange={(e) => setAnyInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") runAny();
+            }}
+            placeholder="Paste a token address (0x…) or type a symbol — any Mantle token"
+            className="min-w-0 flex-1 bg-transparent font-mono text-[14px] text-paper caret-acid outline-none placeholder:text-mut2"
+          />
+          <button
+            onClick={runAny}
+            disabled={loading || !anyInput.trim()}
+            className="shrink-0 border-2 border-paper bg-transparent px-4 py-2 font-mono text-xs font-semibold tracking-[0.04em] text-paper transition-colors hover:bg-paper hover:text-ink disabled:opacity-40"
+          >
+            ANALYZE →
+          </button>
+        </div>
+        <p className="mt-2 font-mono text-[10px] leading-[1.6] text-mut2">
+          Featured assets are curated RWAs; any other token is analyzed live on-chain and labelled
+          (issuer/context unverified). MantleFlow is RWA-focused — non-RWA tokens are flagged, not blocked.
+        </p>
+        {recentAssets.length > 0 ? (
+          <div className="mt-4">
+            <div className="mb-1.5 font-mono text-[10px] tracking-[0.1em] text-mut2">RECENTLY ANALYZED</div>
+            <div className="flex flex-wrap gap-1.5">
+              {recentAssets.slice(0, 8).map((r) => (
+                <button
+                  key={r.address + r.network}
+                  onClick={() => onAnalyze(r.address, r.network)}
+                  title={`${r.address} · ${r.network}`}
+                  className="border border-line px-2 py-1 font-mono text-[11px] text-mut transition-colors hover:border-acid hover:text-acid"
+                >
+                  {r.symbol}
+                  {r.network === "sepolia" ? " ·sep" : ""}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid gap-10 md:grid-cols-2">

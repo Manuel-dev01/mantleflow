@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { DistributionMap } from "@mantleflow/agent";
-import { getMap, runQuery } from "../../lib/api";
+import { getMap, runQuery, type Network } from "../../lib/api";
+import { addRecentAsset, getRecentAssets, type AnalyzedAsset } from "../../lib/history";
 import { ASSETS } from "../../lib/assets";
 import { AskHome } from "../../components/app/AskHome";
 import { Workspace, type TabId } from "../../components/app/Workspace";
@@ -29,6 +30,9 @@ export default function AppPage() {
   const [tab, setTab] = useState<TabId>("overview");
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<Recent[]>([]);
+  const [network, setNetwork] = useState<Network>("mainnet");
+  const [recentAssets, setRecentAssets] = useState<AnalyzedAsset[]>([]);
+  useEffect(() => setRecentAssets(getRecentAssets()), []);
 
   function pickAssetHome(sym: string) {
     setAsset(sym);
@@ -61,6 +65,37 @@ export default function AppPage() {
         if (mr.error && !res.error) setError(mr.error);
       }
       setMap(m);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Analyze ANY Mantle token — a curated symbol OR an arbitrary contract address, on the chosen
+  // network. Map-only (no LLM); remembers the asset in localStorage for quick re-access.
+  async function analyze(input: string, net: Network) {
+    const q = input.trim();
+    if (!q) return;
+    setLoading(true);
+    setError(null);
+    setView("workspace");
+    setTab("overview");
+    setAnswer(null);
+    try {
+      const res = await getMap(q, net);
+      if (res.error) {
+        setError(res.error);
+        setMap(null);
+      } else {
+        const m = res.map ?? null;
+        setMap(m);
+        if (m) {
+          setAsset(m.asset.symbol);
+          addRecentAsset({ address: m.asset.address, symbol: m.asset.symbol, network: m.asset.network });
+          setRecentAssets(getRecentAssets());
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -115,6 +150,8 @@ export default function AppPage() {
           query={query}
           loading={loading}
           recent={recent}
+          network={network}
+          recentAssets={recentAssets}
           onQueryChange={setQuery}
           onPickAsset={pickAssetHome}
           onRun={() => run(query)}
@@ -122,6 +159,8 @@ export default function AppPage() {
             setQuery(q);
             run(q);
           }}
+          onNetworkChange={setNetwork}
+          onAnalyze={analyze}
         />
       ) : (
         <Workspace

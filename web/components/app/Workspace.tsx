@@ -47,9 +47,10 @@ export function Workspace({
     <div className="flex flex-1 flex-col">
       {/* context bar */}
       <div className="flex flex-wrap items-center justify-between gap-5 border-b-2 border-paper px-[26px] py-4">
-        <div className="flex items-baseline gap-3.5">
+        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5">
           <span className="font-display text-[28px] font-extrabold tracking-[-0.02em]">{map?.asset.symbol ?? asset}</span>
           <span className="font-mono text-xs text-mut">{map?.asset.name ?? "—"}</span>
+          {map ? <AssetBadges asset={map.asset} /> : null}
         </div>
         <div className="flex items-center gap-[18px]">
           <AssetChips assets={assets} active={asset} onPick={onSwitchAsset} size="sm" />
@@ -115,6 +116,40 @@ export function Workspace({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Curated/uncurated + heuristic RWA classification + network badges for the analyzed asset. */
+function AssetBadges({ asset }: { asset: DistributionMap["asset"] }) {
+  const cls = asset.classification?.class;
+  const clsLabel =
+    cls === "rwa" ? "RWA" : cls === "capital-market" ? "CAPITAL-MKT" : cls === "not-rwa" ? "NOT RWA?" : cls === "uncertain" ? "UNCERTAIN" : null;
+  return (
+    <span className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] tracking-[0.06em]">
+      {asset.network === "sepolia" ? <Badge label="SEPOLIA" tone="mut" /> : null}
+      {asset.curated ? (
+        <Badge label="FEATURED" tone="acid" title="Curated, hand-verified Mantle RWA / capital-market asset" />
+      ) : (
+        <Badge label="UNCURATED" tone="warn" title="Analyzed live on-chain — issuer / context unverified" />
+      )}
+      {clsLabel ? (
+        <Badge
+          label={clsLabel}
+          tone={cls === "rwa" ? "acid" : cls === "not-rwa" ? "warn" : "mut"}
+          title={`Heuristic RWA classification (${asset.classification?.confidence ?? "?"} confidence) — a labelled estimate, not a fact`}
+        />
+      ) : null}
+    </span>
+  );
+}
+
+function Badge({ label, tone, title }: { label: string; tone: "acid" | "mut" | "warn"; title?: string }) {
+  const c =
+    tone === "acid" ? "border-acid text-acid" : tone === "warn" ? "border-[#e0a54e] text-[#e0a54e]" : "border-line text-mut";
+  return (
+    <span title={title} className={`border px-1.5 py-0.5 uppercase ${c}`}>
+      {label}
+    </span>
   );
 }
 

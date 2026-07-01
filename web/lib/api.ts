@@ -18,10 +18,43 @@ export async function runQuery(query: string, deep = false): Promise<QueryRespon
   return (await res.json()) as QueryResponse;
 }
 
-/** Just the distribution map for one asset — no LLM, fast (workspace asset/tab switching). */
-export async function getMap(symbol: string): Promise<{ map?: DistributionMap; error?: string }> {
-  const res = await fetch(`/api/map?symbol=${encodeURIComponent(symbol)}`);
+export type Network = "mainnet" | "sepolia";
+
+/** Distribution map for a curated symbol OR an arbitrary token address — no LLM, fast. */
+export async function getMap(input: string, network: Network = "mainnet"): Promise<{ map?: DistributionMap; error?: string }> {
+  const res = await fetch(`/api/map?symbol=${encodeURIComponent(input)}&network=${network}`);
   return (await res.json()) as { map?: DistributionMap; error?: string };
+}
+
+export interface FeaturedAsset {
+  symbol: string;
+  name: string;
+  network: Network;
+  curated: boolean;
+}
+
+export interface ResolveResult {
+  resolved: boolean;
+  symbol?: string;
+  name?: string;
+  address?: string;
+  network?: Network;
+  curated?: boolean;
+  issuer?: string | null;
+  featured?: FeaturedAsset[];
+  error?: string;
+}
+
+/** Resolve a symbol / name / 0x address → an asset descriptor (for the "analyze any asset" input). */
+export async function resolveAsset(q: string, network: Network = "mainnet"): Promise<ResolveResult> {
+  const res = await fetch(`/api/resolve?q=${encodeURIComponent(q)}&network=${network}`);
+  return (await res.json()) as ResolveResult;
+}
+
+/** The curated featured assets (single source of truth for the chips). */
+export async function getFeatured(): Promise<{ featured?: FeaturedAsset[]; error?: string }> {
+  const res = await fetch("/api/featured");
+  return (await res.json()) as { featured?: FeaturedAsset[]; error?: string };
 }
 
 // ---- ERC-8004 agent identity + provenance ----------------------------------
