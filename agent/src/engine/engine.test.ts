@@ -8,6 +8,7 @@ const asset = {
   name: "Mantle Index Four",
   address: "0x671642ac281c760e34251d51bc9eef27026f3b7a",
   network: "mainnet" as const,
+  curated: true,
 };
 const ts = "2026-06-26T00:00:00.000Z";
 const rcpt = { sourceName: "test", url: "", observedAt: ts, kind: "fact" as const };

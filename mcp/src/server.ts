@@ -32,24 +32,31 @@ const server = new McpServer({
 
 server.tool(
   "list_tracked_assets",
-  "List the tokenized/RWA assets MantleFlow tracks on Mantle (symbols).",
+  "List MantleFlow's curated FEATURED RWA/capital-market assets on Mantle (any token can also be analyzed by address).",
   {},
-  async () => asText({ assets: caps.trackedSymbols() }),
+  async () => asText({ featured: caps.getFeaturedAssets() }),
 );
 
 server.tool(
   "resolve_asset",
-  "Resolve a natural-language mention of a Mantle RWA/asset to a tracked symbol (or null).",
-  { query: z.string().describe("e.g. 'the Mantle index fund' or 'staked eth'") },
-  async ({ query }) => asText({ resolved: caps.resolveAsset(query) }),
+  "Resolve a mention of ANY Mantle token to an asset: a curated symbol/name, a 0x contract address, or an uncurated symbol (searched). Returns symbol/name/address/network + curated flag (or null).",
+  {
+    query: z.string().describe("e.g. 'staked eth', 'MI4', or a 0x… contract address"),
+    network: z.enum(["mainnet", "sepolia"]).optional().describe("Mantle network (default mainnet)"),
+  },
+  async ({ query, network }) => asText({ resolved: await caps.resolveAsset(query, network) }),
 );
 
 server.tool(
   "get_distribution_map",
-  "Compute the live Distribution Score map for one tracked asset (reachability, liquidity depth, " +
-    "fragmentation, borrowability, compliance gate, cross-chain reach). Every datum is sourced.",
-  { symbol: z.string().describe("tracked symbol, e.g. MI4, mETH, fBTC, USDe, USDY, cmETH") },
-  async ({ symbol }) => asText({ map: await caps.buildDistributionMap(symbol) }),
+  "Compute the live Distribution Score map for ANY Mantle token — a curated symbol OR a 0x contract " +
+    "address, on mainnet or Sepolia (reachability, liquidity depth, fragmentation, borrowability, " +
+    "compliance gate, cross-chain reach, + curated flag & heuristic RWA classification). Every datum is sourced.",
+  {
+    symbol: z.string().describe("curated symbol (e.g. MI4) OR a 0x contract address"),
+    network: z.enum(["mainnet", "sepolia"]).optional().describe("Mantle network (default mainnet)"),
+  },
+  async ({ symbol, network }) => asText({ map: await caps.buildDistributionMap(symbol, network) }),
 );
 
 server.tool(

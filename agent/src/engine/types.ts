@@ -45,12 +45,39 @@ export interface AssetMarketFacts {
   receipts: SourceReceipt[];
 }
 
+/** Heuristic RWA / capital-market classification for an asset (NOT a hard fact — every signal is
+ * labelled an estimate/assumption). Lets the RWA-focused product flag off-thesis tokens honestly. */
+export interface AssetClassification {
+  class: "rwa" | "capital-market" | "uncertain" | "not-rwa";
+  confidence: "high" | "medium" | "low";
+  /** The heuristic signals it weighed, each source-receipted (kind estimate/assumption). */
+  signals: Sourced<string>[];
+}
+
+/** Best-effort third-party context for an asset (issuer/logo/listing), clearly attributed and
+ * never fabricated — missing fields are null. Richer for curated assets, thinner for arbitrary ones. */
+export interface AssetContext {
+  description: string | null;
+  category: string | null;
+  issuerHint: string | null;
+  imageUrl: string | null;
+  /** CoinGecko coin id (from GeckoTerminal) — presence signals the token is listed/known. */
+  coingeckoId: string | null;
+  receipts: SourceReceipt[];
+}
+
 export interface DistributionMap {
   asset: {
     symbol: string;
     name: string;
     address: string;
     network: "mainnet" | "sepolia";
+    /** True for a hand-verified featured asset; false for an arbitrary token analyzed on the fly. */
+    curated: boolean;
+    /** Heuristic RWA/capital-market classification (soft-gate label), when computed. */
+    classification?: AssetClassification | undefined;
+    /** Best-effort third-party context (issuer/logo/listing), when sourced. */
+    context?: AssetContext | undefined;
   };
   /** Token market facts (price / mcap / FDV / 24h volume / supply), when sourced. */
   facts?: AssetMarketFacts | undefined;

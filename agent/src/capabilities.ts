@@ -13,7 +13,9 @@ import { createPriceAdapter } from "./adapters/prices.js";
 import { createLendleAdapter, type LendleReserve } from "./adapters/lendle.js";
 import { findCrossChainRoutes } from "./adapters/crosschain.js";
 import { assembleDistributionMap } from "./engine/engine.js";
-import { type AssetMarketFacts, type ComplianceGate, type DistributionMap } from "./engine/types.js";
+import { type AssetContext, type AssetMarketFacts, type ComplianceGate, type DistributionMap } from "./engine/types.js";
+import { resolveToAsset, type ResolvedAsset, type ResolveDeps } from "./assets/resolve.js";
+import { classifyAsset } from "./assets/classify.js";
 import { type Sourced } from "./types/source-receipt.js";
 
 /**
@@ -21,13 +23,24 @@ import { type Sourced } from "./types/source-receipt.js";
  * Sourced results. The engine composes them into a DistributionMap; the orchestrator exposes the
  * same functions as Anthropic tools. One implementation, two consumers.
  */
+export interface FeaturedAsset {
+  symbol: string;
+  name: string;
+  network: MantleNetwork;
+  curated: true;
+}
+
 export interface Capabilities {
-  resolveAsset(query: string): typeof TRACKED_ASSETS[string] | null;
+  /** Resolve a symbol / name / contract address (curated or arbitrary) → a ResolvedAsset, or null. */
+  resolveAsset(query: string, network?: MantleNetwork): Promise<ResolvedAsset | null>;
   getTokenFacts(symbol: string): Promise<Sourced<Awaited<ReturnType<typeof readTokenFacts>>["value"]>>;
   checkCompliance(symbol: string): Promise<Sourced<ComplianceGate>>;
-  buildDistributionMap(symbol: string): Promise<DistributionMap>;
-  /** Distribution maps for every tracked asset (for the compare view). */
+  /** Build the map for a curated symbol OR an arbitrary token address, on mainnet (default) or sepolia. */
+  buildDistributionMap(input: string, network?: MantleNetwork): Promise<DistributionMap>;
+  /** Distribution maps for every curated/featured asset (for the compare view). */
   compareAssets(): Promise<DistributionMap[]>;
+  /** The curated featured asset descriptors (for the UI chips + MCP list). */
+  getFeaturedAssets(): FeaturedAsset[];
   trackedSymbols(): string[];
 }
 
@@ -55,43 +68,47 @@ export function createCapabilities(config: AppConfig): Capabilities {
     return network === "mainnet" ? config.mantleMainnetRpc : config.mantleSepoliaRpc;
   }
 
-  function requireAsset(symbol: string) {
-    const key = Object.keys(TRACKED_ASSETS).find(
-      (k) => k.toLowerCase() === symbol.trim().toLowerCase(),
-    );
-    const asset = key ? TRACKED_ASSETS[key] : undefined;
-    if (!asset) throw new Error(`Unknown asset "${symbol}". Tracked: ${Object.keys(TRACKED_ASSETS).join(", ")}`);
-    return asset;
+  function clientFor(network: MantleNetwork) {
+    return publicClientFor(network, rpcFor(network));
+  }
+
+  /** Resolve any input (curated symbol/name, arbitrary address, or uncurated search) or throw. */
+  async function resolve(input: string, network: MantleNetwork, ts: string): Promise<ResolvedAsset> {
+    const deps: ResolveDeps = { client: clientFor(network), gt };
+    const resolved = await resolveToAsset(input, network, deps, ts);
+    if (!resolved) {
+      throw new Error(
+        `Could not resolve "${input}" to a Mantle asset. Provide a tracked symbol (${Object.keys(TRACKED_ASSETS).join(", ")}) or a contract address.`,
+      );
+    }
+    return resolved;
   }
 
   return {
-    resolveAsset(query) {
-      const q = query.toUpperCase();
-      for (const [sym, asset] of Object.entries(TRACKED_ASSETS)) {
-        if (q.includes(sym) || q.includes(asset.name.toUpperCase())) return asset;
-      }
-      return null;
+    async resolveAsset(query, network = "mainnet") {
+      const deps: ResolveDeps = { client: clientFor(network), gt };
+      return resolveToAsset(query, network, deps, now());
     },
 
     async getTokenFacts(symbol) {
-      const asset = requireAsset(symbol);
-      const client = publicClientFor(asset.network as MantleNetwork, rpcFor(asset.network as MantleNetwork));
-      return readTokenFacts(client, asset.network as MantleNetwork, asset.address as Address, now());
+      const ts = now();
+      const asset = await resolve(symbol, "mainnet", ts);
+      return readTokenFacts(clientFor(asset.network), asset.network, asset.address, ts);
     },
 
     async checkCompliance(symbol) {
-      const asset = requireAsset(symbol);
+      const ts = now();
+      const asset = await resolve(symbol, "mainnet", ts);
       if (!etherscan) throw new Error("ETHERSCAN_API_KEY required for compliance source-verification");
-      const client = publicClientFor(asset.network as MantleNetwork, rpcFor(asset.network as MantleNetwork));
-      return checkComplianceGate(client, asset.network as MantleNetwork, asset.address as Address, etherscan, now());
+      return checkComplianceGate(clientFor(asset.network), asset.network, asset.address, etherscan, ts);
     },
 
-    async buildDistributionMap(symbol) {
-      const asset = requireAsset(symbol);
-      const network = asset.network as MantleNetwork;
-      const client = publicClientFor(network, rpcFor(network));
-      const addr = asset.address as Address;
+    async buildDistributionMap(input, networkArg) {
       const ts = now();
+      const asset = await resolve(input, (networkArg ?? "mainnet") as MantleNetwork, ts);
+      const network = asset.network; // curated symbols carry their own network (mainnet)
+      const client = clientFor(network);
+      const addr = asset.address;
 
       // Fetch GeckoTerminal pools ONCE and share with reachability + depth so they never disagree on
       // availability (a separate failed call must not make one say "no venue" while the other shows 20).
@@ -150,8 +167,37 @@ export function createCapabilities(config: AppConfig): Capabilities {
             }
           : undefined;
 
+      // Best-effort third-party context (GeckoTerminal listing / logo / curated issuer) — attributed,
+      // never fabricated; and a heuristic RWA classification (soft label for the RWA-focused product).
+      const context: AssetContext = {
+        description: null,
+        category: null,
+        issuerHint: asset.issuer ?? null,
+        imageUrl: market?.value.imageUrl ?? null,
+        coingeckoId: market?.value.coingeckoId ?? null,
+        receipts: market ? [market.receipt] : [],
+      };
+      const classification = classifyAsset({
+        curated: asset.curated,
+        symbol: asset.symbol,
+        name: asset.name,
+        complianceDetermined: compliance.value.determined,
+        complianceTier: compliance.value.tier,
+        context,
+        issuer: asset.issuer,
+        observedAt: ts,
+      });
+
       return assembleDistributionMap({
-        asset: { symbol: asset.symbol, name: asset.name, address: asset.address, network },
+        asset: {
+          symbol: asset.symbol,
+          name: asset.name,
+          address: asset.address,
+          network,
+          curated: asset.curated,
+          classification,
+          context,
+        },
         ...(facts ? { facts } : {}),
         reachability,
         liquidity,
@@ -176,6 +222,15 @@ export function createCapabilities(config: AppConfig): Capabilities {
         }
       }
       return maps;
+    },
+
+    getFeaturedAssets() {
+      return Object.values(TRACKED_ASSETS).map((a) => ({
+        symbol: a.symbol,
+        name: a.name,
+        network: a.network as MantleNetwork,
+        curated: true as const,
+      }));
     },
 
     trackedSymbols() {

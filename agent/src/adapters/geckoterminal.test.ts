@@ -15,6 +15,9 @@ describe("GeckoTerminal adapter", () => {
 
   it("returns empty market for non-mainnet networks", async () => {
     const r = await gt.tokenMarket("sepolia", METH, ts);
-    expect(r.value).toEqual({ priceUsd: null, marketCapUsd: null, fdvUsd: null, volume24hUsd: null });
+    expect(r.value).toEqual({
+      name: null, symbol: null, decimals: null, imageUrl: null, coingeckoId: null,
+      priceUsd: null, marketCapUsd: null, fdvUsd: null, volume24hUsd: null,
+    });
   });
 });

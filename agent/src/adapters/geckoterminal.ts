@@ -54,10 +54,23 @@ export interface GtPool {
 }
 
 export interface GtTokenMarket {
+  /** On-GeckoTerminal token metadata (context), when listed. */
+  name: string | null;
+  symbol: string | null;
+  decimals: number | null;
+  imageUrl: string | null;
+  /** CoinGecko coin id when GeckoTerminal has one — a "this token is listed / known" signal. */
+  coingeckoId: string | null;
   priceUsd: number | null;
   marketCapUsd: number | null;
   fdvUsd: number | null;
   volume24hUsd: number | null;
+}
+
+/** A token candidate from a symbol/name search (address + symbol on Mantle). */
+export interface GtTokenHit {
+  address: string;
+  symbol: string;
 }
 
 /** A single fetch of a token's pools, shared by reachability + depth so they never disagree.
@@ -73,7 +86,28 @@ interface GtPoolRaw {
   relationships?: { dex?: { data?: { id?: string } } };
 }
 interface GtTokenRaw {
-  data?: { attributes?: { price_usd?: string; market_cap_usd?: string; fdv_usd?: string; volume_usd?: { h24?: string } } };
+  data?: {
+    attributes?: {
+      name?: string;
+      symbol?: string;
+      decimals?: number;
+      image_url?: string | null;
+      coingecko_coin_id?: string | null;
+      price_usd?: string;
+      market_cap_usd?: string;
+      fdv_usd?: string;
+      volume_usd?: { h24?: string };
+    };
+  };
+}
+
+interface GtSearchPool {
+  id?: string;
+  attributes?: { name?: string };
+  relationships?: {
+    base_token?: { data?: { id?: string } };
+    quote_token?: { data?: { id?: string } };
+  };
 }
 
 export interface GeckoTerminalAdapter {
@@ -83,8 +117,11 @@ export interface GeckoTerminalAdapter {
   /** Same fetch, but never throws — returns `{pools, receipt, ok}`. Fetch ONCE per asset and share
    * between reachability + depth so they always agree on availability. */
   poolsResult(network: MantleNetwork, address: string, observedAt: string): Promise<GtPoolsResult>;
-  /** Token market facts (price / mcap / fdv / 24h volume). */
+  /** Token market facts + on-GeckoTerminal metadata (name/symbol/decimals/image/coingecko id). */
   tokenMarket(network: MantleNetwork, address: string, observedAt: string): Promise<Sourced<GtTokenMarket>>;
+  /** Symbol/name → candidate Mantle token addresses, via GeckoTerminal's pool search. Never throws
+   * (a search miss returns []); mainnet only. Used to resolve an uncurated symbol to an address. */
+  searchToken(network: MantleNetwork, query: string): Promise<GtTokenHit[]>;
 }
 
 export function createGeckoTerminalAdapter(): GeckoTerminalAdapter {
@@ -155,13 +192,21 @@ export function createGeckoTerminalAdapter(): GeckoTerminalAdapter {
         kind: "fact" as const,
         note: `market facts for ${address}`,
       };
-      const empty: GtTokenMarket = { priceUsd: null, marketCapUsd: null, fdvUsd: null, volume24hUsd: null };
+      const empty: GtTokenMarket = {
+        name: null, symbol: null, decimals: null, imageUrl: null, coingeckoId: null,
+        priceUsd: null, marketCapUsd: null, fdvUsd: null, volume24hUsd: null,
+      };
       if (network !== "mainnet") return sourced(empty, { ...receipt, note: "GeckoTerminal indexes mainnet only" });
       try {
         const data = await fetchJson<GtTokenRaw>(url, { ttlMs: 5 * 60_000, timeoutMs: 20_000 });
         const a = data.data?.attributes ?? {};
         return sourced(
           {
+            name: a.name ?? null,
+            symbol: a.symbol ?? null,
+            decimals: typeof a.decimals === "number" ? a.decimals : null,
+            imageUrl: a.image_url && a.image_url !== "missing.png" ? a.image_url : null,
+            coingeckoId: a.coingecko_coin_id ?? null,
             priceUsd: num(a.price_usd),
             marketCapUsd: num(a.market_cap_usd),
             fdvUsd: num(a.fdv_usd),
@@ -171,6 +216,36 @@ export function createGeckoTerminalAdapter(): GeckoTerminalAdapter {
         );
       } catch {
         return sourced(empty, receipt);
+      }
+    },
+
+    async searchToken(network, query) {
+      const q = query.trim();
+      if (network !== "mainnet" || q.length < 2) return [];
+      const url = `${GT_BASE}/search/pools?query=${encodeURIComponent(q)}&network=${GT_NETWORK}&page=1`;
+      const idAddr = (id?: string): string | null =>
+        id && id.startsWith(`${GT_NETWORK}_`) ? id.slice(GT_NETWORK.length + 1) : null;
+      try {
+        const data = await fetchJson<{ data?: GtSearchPool[] }>(url, { ttlMs: 5 * 60_000, timeoutMs: 15_000, retries: 2 });
+        const hits = new Map<string, GtTokenHit>(); // dedupe by address
+        for (const p of data.data ?? []) {
+          if (!p.id?.startsWith(`${GT_NETWORK}_`)) continue; // Mantle pools only
+          const [base, quote] = (p.attributes?.name ?? "").split(" / ").map((s) => s.trim());
+          for (const c of [
+            { sym: base, addr: idAddr(p.relationships?.base_token?.data?.id) },
+            { sym: quote, addr: idAddr(p.relationships?.quote_token?.data?.id) },
+          ]) {
+            if (!c.addr || !c.sym) continue;
+            const key = c.addr.toLowerCase();
+            if (!hits.has(key)) hits.set(key, { address: c.addr, symbol: c.sym });
+          }
+        }
+        const lc = q.toLowerCase();
+        const all = [...hits.values()];
+        const matched = all.filter((t) => t.symbol.toLowerCase().includes(lc) || lc.includes(t.symbol.toLowerCase()));
+        return (matched.length ? matched : all).slice(0, 6);
+      } catch {
+        return [];
       }
     },
   };

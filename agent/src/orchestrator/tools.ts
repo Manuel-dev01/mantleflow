@@ -15,10 +15,13 @@ export const TOOL_DEFS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "resolve_asset",
       description:
-        "Resolve a natural-language mention of a tokenized/RWA asset on Mantle to a tracked asset. Returns the asset's symbol/name/address, or the list of tracked assets if unknown.",
+        "Resolve a mention of ANY Mantle token to an asset: a curated symbol/name, OR an arbitrary contract address (0x…), OR an uncurated symbol (searched). Returns symbol/name/address/network + whether it is a curated (featured) asset. Returns the featured list if it cannot resolve.",
       parameters: {
         type: "object",
-        properties: { query: { type: "string", description: "The user's asset mention." } },
+        properties: {
+          query: { type: "string", description: "The user's asset mention or a 0x contract address." },
+          network: { type: "string", enum: ["mainnet", "sepolia"], description: "Mantle network (default mainnet)." },
+        },
         required: ["query"],
       },
     },
@@ -28,10 +31,13 @@ export const TOOL_DEFS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     function: {
       name: "get_distribution_map",
       description:
-        "Compute the Distribution Score map for a tracked asset from live Mantle data: real DEX trading venues + liquidity + 24h volume (GeckoTerminal across all Mantle DEXs), liquidity depth (±2% of mid, estimated), fragmentation (HHI), borrowability (Lendle), cross-chain reach (LayerZero OFT / CCIP), compliance gating, and token market facts (price/market-cap/FDV/volume/supply). Every datum carries a source receipt. This is the authoritative source — only state numbers it returns.",
+        "Compute the Distribution Score map for ANY Mantle token (a curated symbol OR a 0x contract address) from live data: real DEX trading venues + liquidity + 24h volume (GeckoTerminal across all Mantle DEXs), liquidity depth (±2% of mid, estimated), fragmentation (HHI), borrowability (Lendle), cross-chain reach (LayerZero OFT / CCIP), compliance gating, token market facts, plus whether it is a curated (featured) asset and a heuristic RWA classification. Every datum carries a source receipt. This is the authoritative source — only state numbers it returns.",
       parameters: {
         type: "object",
-        properties: { symbol: { type: "string", description: "Asset symbol, e.g. MI4." } },
+        properties: {
+          symbol: { type: "string", description: "Asset symbol (e.g. MI4) OR a 0x contract address." },
+          network: { type: "string", enum: ["mainnet", "sepolia"], description: "Mantle network (default mainnet)." },
+        },
         required: ["symbol"],
       },
     },
@@ -54,11 +60,13 @@ export async function runTool(
 ): Promise<string> {
   switch (name) {
     case "resolve_asset": {
-      const asset = ctx.caps.resolveAsset(String(args.query ?? ""));
+      const network = args.network === "sepolia" ? "sepolia" : "mainnet";
+      const asset = await ctx.caps.resolveAsset(String(args.query ?? ""), network);
       if (!asset) {
         return JSON.stringify({
           resolved: false,
-          trackedAssets: Object.keys(TRACKED_ASSETS),
+          featuredAssets: Object.keys(TRACKED_ASSETS),
+          hint: "Not a curated symbol and no match found — pass a 0x contract address to analyze any Mantle token.",
         });
       }
       return JSON.stringify({
@@ -67,11 +75,13 @@ export async function runTool(
         name: asset.name,
         address: asset.address,
         network: asset.network,
-        issuer: asset.issuer,
+        curated: asset.curated,
+        issuer: asset.issuer ?? null,
       });
     }
     case "get_distribution_map": {
-      const map = await ctx.caps.buildDistributionMap(String(args.symbol ?? ""));
+      const network = args.network === "sepolia" ? "sepolia" : undefined;
+      const map = await ctx.caps.buildDistributionMap(String(args.symbol ?? ""), network);
       ctx.collected.map = map;
       // Top trading venues (swap only) from the liquidity sub-score — so the model cites real names.
       const liq = map.subScores.find((s) => s.id === "liquidity-depth");
@@ -82,7 +92,17 @@ export async function runTool(
         .map((v) => ({ venue: v.venue, dex: v.dex, liquidityUsd: v.liquidityUsd, volume24hUsd: v.volume24hUsd, slipPctAt250k: v.slipPctAt250k, method: v.method }));
       const borrow = (map.subScores.find((s) => s.id === "borrowability")?.inputs?.[0]?.value ?? null) as Record<string, unknown> | null;
       return JSON.stringify({
-        asset: map.asset,
+        asset: {
+          symbol: map.asset.symbol,
+          name: map.asset.name,
+          address: map.asset.address,
+          network: map.asset.network,
+          curated: map.asset.curated,
+          classification: map.asset.classification
+            ? { class: map.asset.classification.class, confidence: map.asset.classification.confidence }
+            : null,
+          issuerHint: map.asset.context?.issuerHint ?? null,
+        },
         facts: map.facts
           ? { priceUsd: map.facts.priceUsd, marketCapUsd: map.facts.marketCapUsd, fdvUsd: map.facts.fdvUsd, volume24hUsd: map.facts.volume24hUsd, totalSupply: map.facts.totalSupply }
           : null,

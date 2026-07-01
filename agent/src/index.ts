@@ -30,7 +30,9 @@ export {
   type CrossChainProtocol,
 } from "./adapters/crosschain.js";
 export { type LendleReserve } from "./adapters/lendle.js";
-export { createCapabilities, type Capabilities } from "./capabilities.js";
+export { createCapabilities, type Capabilities, type FeaturedAsset } from "./capabilities.js";
+export { resolveToAsset, type ResolvedAsset } from "./assets/resolve.js";
+export { classifyAsset } from "./assets/classify.js";
 export { runQuery, type QueryResult } from "./orchestrator/orchestrator.js";
 export {
   createErc8004Reader,
