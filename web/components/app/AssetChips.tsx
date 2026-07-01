@@ -20,7 +20,7 @@ export function AssetChips({
             key={sym}
             onClick={() => onPick(sym)}
             className={`font-mono font-semibold transition-colors ${pad} ${
-              isActive ? "bg-acid text-ink" : "bg-ink text-paper hover:bg-paper/10"
+              isActive ? "bg-acid text-ink" : "bg-ink text-paper hover:bg-paper hover:text-ink"
             }`}
           >
             {sym}
