@@ -66,15 +66,15 @@ export function Workspace({
       {map ? <FactsStrip facts={map.facts} symbol={map.asset.symbol} /> : null}
 
       <div className="grid flex-1 md:grid-cols-[220px_1fr]">
-        {/* left nav */}
-        <div className="flex flex-col border-b-2 border-paper md:border-b-0 md:border-r-2">
+        {/* nav — horizontal scrollable strip on mobile (keeps the panel in view), vertical sidebar on desktop */}
+        <div className="flex flex-row overflow-x-auto border-b-2 border-paper md:flex-col md:overflow-x-visible md:border-b-0 md:border-r-2">
           {TABS.map((t) => {
             const active = t.id === tab;
             return (
               <button
                 key={t.id}
                 onClick={() => onTab(t.id)}
-                className={`flex items-center gap-3 border-b-2 border-line px-[18px] py-[18px] text-left font-mono text-[13px] font-semibold transition-colors ${
+                className={`flex shrink-0 items-center gap-2.5 whitespace-nowrap border-line px-4 py-3.5 text-left font-mono text-[13px] font-semibold transition-colors border-r-2 last:border-r-0 md:border-r-0 md:border-b-2 md:px-[18px] md:py-[18px] ${
                   active ? "bg-acid text-ink" : "bg-transparent text-paper hover:bg-paper/5"
                 }`}
               >
@@ -83,7 +83,7 @@ export function Workspace({
               </button>
             );
           })}
-          <div className="mt-auto p-[18px] font-mono text-[10px] leading-[1.9] text-mut2">
+          <div className="mt-auto hidden p-[18px] font-mono text-[10px] leading-[1.9] text-mut2 md:block">
             CHAIN · MANTLE {map?.asset.network?.toUpperCase() ?? ""}
             <br />
             SOURCE · LIVE eth_call

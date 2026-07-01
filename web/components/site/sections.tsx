@@ -5,7 +5,12 @@ import { SourceTag } from "../SourceTag";
 
 // Shared brutalist CTA - acid fill, hover inverts to ink/acid.
 export function LaunchCTA({ size = "md", label = "LAUNCH APP →" }: { size?: "sm" | "md" | "lg"; label?: string }) {
-  const pad = size === "lg" ? "px-7 py-4 text-[15px]" : size === "sm" ? "px-4 py-2.5 text-xs" : "px-6 py-4 text-sm";
+  const pad =
+    size === "lg"
+      ? "px-5 py-3.5 text-sm sm:px-7 sm:py-4 sm:text-[15px]"
+      : size === "sm"
+        ? "px-4 py-2.5 text-xs"
+        : "px-6 py-4 text-sm";
   return (
     <Link
       href="/app"
@@ -36,12 +41,12 @@ export function Hero() {
       <div className="mb-[30px] font-mono text-xs tracking-[0.18em] text-acid">
         RESEARCH AGENT · RWA DISTRIBUTION ON MANTLE
       </div>
-      <h1 className="m-0 font-display text-[clamp(52px,11vw,164px)] font-extrabold uppercase leading-[0.84] tracking-[-0.035em]">
+      <h1 className="m-0 font-display text-[clamp(38px,11vw,164px)] font-extrabold uppercase leading-[0.84] tracking-[-0.035em]">
         Issuance
         <br />
         is easy.
         <br />
-        <span className="bg-acid px-3.5 text-ink">Distribution</span>
+        <span className="bg-acid px-2.5 text-ink sm:px-3.5">Distribution</span>
         <br />
         isn’t.
       </h1>
@@ -53,12 +58,12 @@ export function Hero() {
         </p>
         <div className="flex gap-3.5">
           <LaunchCTA size="lg" />
-          <Link
-            href="/app"
-            className="inline-block border-2 border-paper bg-transparent px-7 py-4 font-mono text-[15px] font-semibold tracking-[0.04em] text-paper transition-colors hover:bg-paper hover:text-ink"
+          <a
+            href="#thesis"
+            className="inline-block border-2 border-paper bg-transparent px-5 py-3.5 font-mono text-sm font-semibold tracking-[0.04em] text-paper transition-colors hover:bg-paper hover:text-ink sm:px-7 sm:py-4 sm:text-[15px]"
           >
             THE THESIS
-          </Link>
+          </a>
         </div>
       </div>
     </div>
