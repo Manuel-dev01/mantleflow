@@ -8,10 +8,10 @@ every datum carrying a source receipt.
 
 | Tool | Args | Returns |
 |---|---|---|
-| `list_tracked_assets` | - | tracked symbols |
-| `resolve_asset` | `query` | matched tracked asset (or null) |
-| `get_distribution_map` | `symbol` | live `DistributionMap` (6 sub-scores, sourced) |
-| `compare_assets` | - | every asset's map, for the leaderboard |
+| `list_tracked_assets` | - | the curated FEATURED assets |
+| `resolve_asset` | `query`, `network?` | resolve a symbol / name / 0x address to an asset (curated flag), or null |
+| `get_distribution_map` | `symbol`, `network?` | live `DistributionMap` for ANY Mantle token (curated symbol or 0x address; 6 sub-scores + curated flag + heuristic RWA classification), sourced |
+| `compare_assets` | - | every featured asset's map, for the leaderboard |
 | `get_agent_identity` | - | ERC-8004 registry coords + agentId |
 
 ## Run

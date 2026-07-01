@@ -5,7 +5,8 @@ description: >-
   it can actually be bought, sold, borrowed against, and bridged, and exactly who is gated from
   holding it. Use this whenever a user asks about secondary-market reachability, liquidity depth or
   fragmentation, borrowability/collateral, compliance gating (transfer-agent allowlists, blocklists),
-  or exit routes for a Mantle RWA / capital-market asset (MI4, mETH, cmETH, fBTC, USDe, USDY). Returns
+  or exit routes for ANY Mantle token - a curated RWA (MI4, mETH, cmETH, fBTC, USDe, USDY) or any 0x
+  contract address (analyzed live on-chain, mainnet or Sepolia). Returns
   a Distribution Score map in which every number carries a source receipt (source + timestamp). Do not
   use it for token issuance, price prediction, or chains other than Mantle.
 license: MIT
@@ -35,9 +36,12 @@ Trigger on questions like:
 
 Do **not** use it for: token minting/issuance mechanics, price forecasts, or non-Mantle chains.
 
-## Tracked assets
+## Featured assets (any Mantle token also works)
 
-`MI4` (Mantle Index Four - Securitize-gated), `mETH`, `cmETH`, `fBTC`, `USDe`, `USDY`.
+Curated / featured: `MI4` (Mantle Index Four - Securitize-gated), `mETH`, `cmETH`, `fBTC`, `USDe`, `USDY`.
+Any other Mantle token can be analyzed by contract address (mainnet or Sepolia): it is read live on-chain,
+labelled *uncurated* (issuer/context unverified), and given a heuristic RWA classification. MantleFlow is
+RWA-focused, so non-RWA tokens are flagged, not blocked.
 
 ## The Distribution Score (sub-scores, each sourced)
 
@@ -63,14 +67,14 @@ This skill wraps the **MantleFlow MCP server** (`@mantleflow/mcp`, stdio). Tools
 
 | Tool | Use |
 |---|---|
-| `list_tracked_assets` | discover supported symbols |
-| `resolve_asset(query)` | map NL → a tracked symbol |
-| `get_distribution_map(symbol)` | the full sourced map for one asset |
-| `compare_assets()` | every asset, ranked |
+| `list_tracked_assets` | the curated featured assets |
+| `resolve_asset(query, network?)` | resolve a symbol / name / 0x address → asset (with a curated flag) |
+| `get_distribution_map(symbol, network?)` | the full sourced map for ANY Mantle token (curated symbol or 0x address) |
+| `compare_assets()` | every featured asset, ranked |
 | `get_agent_identity()` | the agent's ERC-8004 identity (Mantle mainnet #141 / Sepolia #309) |
 
 Start it: `npx tsx mcp/src/server.ts` (see `mcp/README.md` for the Claude Desktop config). The same
-capability is live at `https://mantleflow.vercel.app` (`POST /api/query`, `GET /api/map?symbol=`).
+capability is live at `https://mantleflow.vercel.app` (`POST /api/query`, `GET /api/map?symbol=` or `?address=`).
 
 ## Agent-native provenance
 

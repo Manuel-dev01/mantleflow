@@ -25,7 +25,11 @@ explore by tab:
 - **Gates** - the compliance tier (gated / blockable / open), the on-chain mechanism, and its evidence.
 
 A token-facts strip (price, market cap, FDV, 24h volume, supply) shows on every tab. Switching between
-the tracked assets - **MI4, mETH, cmETH, fBTC, USDe, USDY** - is instant.
+the **featured** assets - **MI4, mETH, cmETH, fBTC, USDe, USDY** - is instant. You can also **analyze any
+Mantle token**: paste a contract address or type a symbol in "Analyze any Mantle asset" (mainnet or
+Sepolia). Non-featured tokens are analyzed live on-chain, classified for RWA-likeness (a labelled
+heuristic), and flagged "uncurated - issuer/context unverified"; MantleFlow is RWA-focused, so non-RWA
+tokens are flagged, not blocked.
 
 **Pricing tiers.** Asking a question and browsing every tab is **free**. A premium cross-asset
 *deep-dive* is metered with x402 (see below) and is the only paid surface.
@@ -38,7 +42,9 @@ the tracked assets - **MI4, mETH, cmETH, fBTC, USDe, USDY** - is instant.
 |----------|--------|---------|------|
 | `/api/query` | `POST` `{ query }` | Free natural-language answer + distribution map | Free |
 | `/api/query` | `POST` `{ query, deep: true }` | Premium cross-asset deep-dive | x402-metered |
-| `/api/map?symbol=` | `GET` | Distribution map for one asset (no LLM) | Free |
+| `/api/map?symbol=` or `?address=` `&network=` | `GET` | Distribution map for ANY Mantle token - a curated symbol or a 0x address, mainnet or Sepolia (no LLM) | Free |
+| `/api/resolve?q=&network=` | `GET` | Resolve a symbol / name / 0x address to an asset descriptor (with a curated flag) | Free |
+| `/api/featured` | `GET` | The curated featured assets | Free |
 | `/.well-known/agent-card.json` | `GET` | The agent's identity card (registries, agentId, x402 block) | Free |
 | `/api/verify?tx=&hash=` | `GET` | Re-confirm an on-chain provenance attestation | Free |
 
@@ -47,8 +53,9 @@ the tracked assets - **MI4, mETH, cmETH, fBTC, USDe, USDY** - is instant.
 curl -s -X POST https://mantleflow.vercel.app/api/query \
   -H "content-type: application/json" -d '{"query":"what is mETH and where can I trade it?"}'
 
-# Free map for one asset
+# Free map for a featured symbol OR any token address (mainnet default; add &network=sepolia for Sepolia)
 curl -s "https://mantleflow.vercel.app/api/map?symbol=MI4"
+curl -s "https://mantleflow.vercel.app/api/map?address=0x78c1b0C915c4FAA5FffA6CAbf0219DA63d7f4cb8"
 ```
 
 With x402 disabled by configuration the deep-dive runs free too, so a self-hosted deployment stays
@@ -63,10 +70,10 @@ MantleFlow ships as a **Mantle AI Agent Skill** in the open `SKILL.md` format
 ([`mcp/`](../mcp), stdio transport). Any MCP-capable agent (e.g. Claude Desktop or CLI) can install the
 skill and call the engine's tools directly:
 
-- `get_distribution_map` - the full Distribution Score map for an asset
-- `compare_assets` - side-by-side across the tracked assets
-- `resolve_asset` - natural-language symbol/name → asset
-- `list_tracked_assets` - the supported asset set
+- `get_distribution_map` - the full Distribution Score map for ANY Mantle token (curated symbol or 0x address, mainnet/Sepolia)
+- `compare_assets` - side-by-side across the featured assets
+- `resolve_asset` - resolve a symbol / name / 0x address to an asset (with a curated flag)
+- `list_tracked_assets` - the curated featured assets
 - `get_agent_identity` - the agent's on-chain identity
 
 The web API and the MCP tools share one capability layer, so a result is identical whichever way you

@@ -59,7 +59,7 @@ suppressed (shown as “-”) when fewer than three are available - never a misl
 
 ## Headline findings (live)
 
-Distribution varies enormously across six Mantle assets - that spread *is* the research result:
+Distribution varies enormously across the six **featured** Mantle assets - that spread *is* the research result:
 
 | Asset | Trading venues | DEX liquidity | Composite | Compliance |
 |-------|:--:|--:|:--:|------------|
@@ -78,6 +78,11 @@ Distribution varies enormously across six Mantle assets - that spread *is* the r
 
 Full per-asset findings: [`docs/FINDINGS.md`](docs/FINDINGS.md) · how the score works:
 [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) · how to use it: [`docs/USAGE.md`](docs/USAGE.md).
+
+**Beyond the featured set:** paste any Mantle token's contract address (or search a symbol) to analyze it
+live, on mainnet or Sepolia - the six above are curated RWAs, but the engine runs on any ERC-20 on Mantle.
+Non-curated tokens are labelled honestly and given a heuristic RWA classification; MantleFlow is
+RWA-focused, so non-RWA tokens are flagged, not blocked.
 
 ---
 

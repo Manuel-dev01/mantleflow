@@ -7,6 +7,13 @@ sub-scores, each derived from sourced on-chain or first-party API data, each dri
 to the underlying numbers. The engine never emits a sub-score it cannot source, and never emits a
 composite without showing its parts.
 
+The engine is **address-driven**: it runs on any Mantle ERC-20, not just the featured six. A curated
+featured asset carries hand-verified metadata (issuer, gates); any other token is analyzed live on-chain
+and labelled *uncurated* (issuer/context unverified), with a **heuristic RWA classification**
+(rwa / capital-market / uncertain / not-rwa) derived from the compliance tier, name/symbol, and listing
+signals - a labelled estimate, never a fact. MantleFlow is RWA-focused, so a non-RWA token is flagged,
+not blocked.
+
 ---
 
 ## The six sub-scores

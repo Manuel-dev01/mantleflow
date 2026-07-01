@@ -4,6 +4,10 @@ The composite is a **weighted partial mean** over the *computed* sub-scores - an
 source are excluded and the composite is labelled partial. The engine refuses to emit a composite
 without its sub-scores, and refuses to invent a sub-score it cannot source.
 
+The engine is address-driven and runs on ANY Mantle ERC-20 (a curated featured asset or an arbitrary
+contract address, mainnet or Sepolia). Non-curated tokens are labelled *uncurated* and given a heuristic
+RWA classification (rwa / capital-market / uncertain / not-rwa) - a labelled estimate, never a fact.
+
 ## Sub-score derivations
 
 - **Reachability** `0 | 25 + 25·venues` - GeckoTerminal indexes every Mantle DEX (Agni, Merchant Moe
