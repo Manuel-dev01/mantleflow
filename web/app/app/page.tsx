@@ -88,21 +88,22 @@ export default function AppPage() {
   return (
     <div className="flex min-h-screen flex-col bg-ink">
       {/* top bar */}
-      <div className="flex items-center justify-between border-b-2 border-paper px-[26px] py-3.5 font-mono">
-        <div className="flex items-center gap-5">
+      <div className="flex items-center justify-between gap-2 border-b-2 border-paper px-4 py-3 font-mono md:px-[26px] md:py-3.5">
+        <div className="flex items-center gap-3 md:gap-5">
           <span className="text-sm font-semibold tracking-[0.04em]">MANTLEFLOW</span>
-          <span className="flex items-center gap-1.5 text-[11px] text-mut">
+          <span className="hidden items-center gap-1.5 text-[11px] text-mut sm:flex">
             <span className="h-[7px] w-[7px] bg-acid" />
             LIVE · MANTLE L2
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           <AgentIdentity />
           <Link
             href="/"
-            className="border-2 border-paper bg-transparent px-3.5 py-2 font-mono text-[11px] tracking-[0.04em] text-paper transition-colors hover:bg-paper hover:text-ink"
+            className="whitespace-nowrap border-2 border-paper bg-transparent px-3 py-2 font-mono text-[11px] tracking-[0.04em] text-paper transition-colors hover:bg-paper hover:text-ink md:px-3.5"
           >
-            ← EXIT TO SITE
+            <span className="sm:hidden">EXIT ↗</span>
+            <span className="hidden sm:inline">← EXIT TO SITE</span>
           </Link>
         </div>
       </div>

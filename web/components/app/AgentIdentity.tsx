@@ -32,7 +32,7 @@ export function AgentIdentity() {
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 border-2 border-line px-2.5 py-1.5 font-mono text-[10px] tracking-[0.04em] text-mut transition-colors hover:border-acid hover:text-acid"
+        className="flex items-center gap-1.5 whitespace-nowrap border-2 border-line px-2.5 py-1.5 font-mono text-[10px] tracking-[0.04em] text-mut transition-colors hover:border-acid hover:text-acid"
         title="ERC-8004 on-chain identity"
       >
         <span className={`h-1.5 w-1.5 ${registered ? "bg-acid" : "bg-mut2"}`} />
